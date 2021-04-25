@@ -259,7 +259,6 @@ int flush_multidatasets() {
     for ( i = 0; i < dataset_size; ++i ) {
         H5Sget_simple_extent_dims (multi_datasets[i].mem_space_id, dims, mdims);
         esize = H5Tget_size (multi_datasets[i].mem_type_id);
-        total_data_size += dims[0] * esize;
     }
 
     //printf("rank %d number of hyperslab called %d\n", rank, hyperslab_count);
@@ -290,6 +289,7 @@ int fill_data_buffer(char*** buf, int n_datasets, int rank, int ndim, hsize_t *d
 }
 
 int free_data_buffer(char** buf, int n_datasets) {
+    int i;
     for ( i = 0; i < n_datasets; ++i ) {
         free(buf[i]);
     }
@@ -299,6 +299,7 @@ int free_data_buffer(char** buf, int n_datasets) {
 int create_datasets(hid_t fid, hid_t **dids, int n_datasets, int ndim, hsize_t *dims) {
     int i;
     hid_t dcplid = -1;
+    hid_t sid;
     char name[128];
 
     dcplid = H5Pcreate (H5P_DATASET_CREATE);
@@ -317,7 +318,7 @@ int create_datasets(hid_t fid, hid_t **dids, int n_datasets, int ndim, hsize_t *
     return 0;
 }
 
-int close_datasets(hid_t **dids, int n_datasets) {
+int close_datasets(hid_t *dids, int n_datasets) {
     int i;
     for ( i = 0; i < n_datasets; ++i ) {
         H5Dclose(dids[i]);
@@ -327,7 +328,7 @@ int close_datasets(hid_t **dids, int n_datasets) {
 
 int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, int nprocs) {
     int i, j;
-    hid_t dsid, sid;
+    hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
     hsize_t total_memspace_size;
 
@@ -349,11 +350,11 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     msid = H5Screate_simple (1, &total_memspace_size, &total_memspace_size);
     register_memspace_recycle(msid);
     register_multidataset(buf, did, dsid, msid, H5T_NATIVE_CHAR, 1);
-
+    return 0;
 }
 
 int main (int argc, char **argv) {
-    int i, ndim, n_datasets, req_count;
+    int i, ndim, n_datasets, req_count, rank, nprocs;
     size_t req_size = 0;
     hsize_t *dims;
 
