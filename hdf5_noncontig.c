@@ -4,8 +4,8 @@
 #include <unistd.h> /* getopt() */
 #include <hdf5.h>
 
-#define ENABLE_MULTIDATASET 1
-#define MULTIDATASET_DEFINE 0
+#define ENABLE_MULTIDATASET 0
+#define MULTIDATASET_DEFINE 1
 
 static int dataset_size;
 static int dataset_size_limit;
