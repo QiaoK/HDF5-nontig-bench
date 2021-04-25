@@ -294,6 +294,7 @@ int free_data_buffer(char** buf, int n_datasets) {
         free(buf[i]);
     }
     free(buf);
+    return 0;
 }
 
 int create_datasets(hid_t fid, hid_t **dids, int n_datasets, int ndim, hsize_t *dims) {
@@ -326,11 +327,11 @@ int close_datasets(hid_t *dids, int n_datasets) {
     return 0;
 }
 
-int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, int nprocs) {
+int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, int rank, int nprocs) {
     int i, j;
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
-    hsize_t total_memspace_size;
+    hsize_t total_memspace_size = 1;
 
     dsid = H5Dget_space (did);
     register_dataspace_recycle(dsid);
