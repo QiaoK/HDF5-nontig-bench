@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h> /* strcpy(), strncpy() */
 #include <unistd.h> /* getopt() */
-#include <hdf5.h>
+#include "hdf5.h"
 
 #define ENABLE_MULTIDATASET 0
 #define MULTIDATASET_DEFINE 1
@@ -127,6 +127,103 @@ int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mt
         multi_datasets[dataset_size].u.rbuf = buf;
     }
     dataset_size++;
+    return 0;
+}
+
+int print_no_collective_cause(uint32_t local_no_collective_cause,uint32_t global_no_collective_cause) {
+    switch (local_no_collective_cause) {
+    case H5D_MPIO_COLLECTIVE: {
+        //printf("MPI-IO collective successful\n");
+        break;
+    }
+    case H5D_MPIO_SET_INDEPENDENT: {
+        printf("local flag: MPI-IO independent flag is on\n");
+        break;
+    }
+    case H5D_MPIO_DATATYPE_CONVERSION  : {
+        printf("local flag: MPI-IO datatype conversion needed\n");
+        break;
+    }
+    case H5D_MPIO_DATA_TRANSFORMS: {
+        printf("local flag: MPI-IO H5D_MPIO_DATA_TRANSFORMS.\n");
+        break;
+    }
+/*
+    case H5D_MPIO_SET_MPIPOSIX: {
+        printf("local flag: MPI-IO H5D_MPIO_SET_MPIPOSIX \n");
+    }
+*/
+    case H5D_MPIO_NOT_SIMPLE_OR_SCALAR_DATASPACES: {
+        printf("local flag: MPI-IO NOT_SIMPLE_OR_SCALAR_DATASPACES\n");
+        break;
+    }
+/*
+    case H5D_MPIO_POINT_SELECTIONS: {
+        printf("local flag: MPI-IO H5D_MPIO_POINT_SELECTIONS\n");
+    }
+*/
+    case H5D_MPIO_NOT_CONTIGUOUS_OR_CHUNKED_DATASET: {
+        printf("local flag: MPI-IO H5D_MPIO_NOT_CONTIGUOUS_OR_CHUNKED_DATASET\n");
+        break;
+    }
+/*
+    case H5D_MPIO_FILTERS: {
+        printf("local flag: MPI-IO H5D_MPIO_FILTERS\n");
+        break;
+    }
+*/
+    default: {
+        printf("undefined label for collective cause\n");
+        break;
+    }
+    }
+
+    switch (global_no_collective_cause) {
+    case H5D_MPIO_COLLECTIVE: {
+        //printf("MPI-IO collective successful\n");
+        break;
+    }
+    case H5D_MPIO_SET_INDEPENDENT: {
+        printf("global flag: MPI-IO independent flag is on\n");
+        break;
+    }
+    case H5D_MPIO_DATATYPE_CONVERSION  : {
+        printf("global flag: MPI-IO datatype conversion needed\n");
+        break;
+    }
+    case H5D_MPIO_DATA_TRANSFORMS: {
+        printf("global flag: MPI-IO H5D_MPIO_DATA_TRANSFORMS.\n");
+        break;
+    }
+/*
+    case H5D_MPIO_SET_MPIPOSIX: {
+        printf("global flag: MPI-IO H5D_MPIO_SET_MPIPOSIX \n");
+    }
+*/
+    case H5D_MPIO_NOT_SIMPLE_OR_SCALAR_DATASPACES: {
+        printf("global flag: MPI-IO NOT_SIMPLE_OR_SCALAR_DATASPACES\n");
+        break;
+    }
+/*
+    case H5D_MPIO_POINT_SELECTIONS: {
+        printf("global flag: MPI-IO H5D_MPIO_POINT_SELECTIONS\n");
+    }
+*/
+    case H5D_MPIO_NOT_CONTIGUOUS_OR_CHUNKED_DATASET: {
+        printf("global flag: MPI-IO H5D_MPIO_NOT_CONTIGUOUS_OR_CHUNKED_DATASET\n");
+        break;
+    }
+/*
+    case H5D_MPIO_FILTERS: {
+        printf("global flag: MPI-IO H5D_MPIO_FILTERS\n");
+        break;
+    }
+*/
+    default: {
+        printf("undefined label for collective cause\n");
+        break;
+    }
+    }
     return 0;
 }
 
