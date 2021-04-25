@@ -7,19 +7,6 @@
 #define ENABLE_MULTIDATASET 0
 #define MULTIDATASET_DEFINE 1
 
-static int dataset_size;
-static int dataset_size_limit;
-static int dataspace_recycle_size;
-static int dataspace_recycle_size_limit;
-static int memspace_recycle_size;
-static int memspace_recycle_size_limit;
-
-static hsize_t one[H5S_MAX_RANK];
-
-static H5D_rw_multi_t *multi_datasets;
-static hid_t *memspace_recycle;
-static hid_t *dataspace_recycle;
-
 #if MULTIDATASET_DEFINE == 1
 typedef struct H5D_rw_multi_t
 {
@@ -33,6 +20,19 @@ typedef struct H5D_rw_multi_t
     } u;
 } H5D_rw_multi_t;
 #endif
+
+static int dataset_size;
+static int dataset_size_limit;
+static int dataspace_recycle_size;
+static int dataspace_recycle_size_limit;
+static int memspace_recycle_size;
+static int memspace_recycle_size_limit;
+
+static hsize_t one[H5S_MAX_RANK];
+
+static H5D_rw_multi_t *multi_datasets;
+static hid_t *memspace_recycle;
+static hid_t *dataspace_recycle;
 
 int dataspace_recycle_all() {
     int i;
