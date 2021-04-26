@@ -69,6 +69,7 @@ static int memspace_recycle_all() {
 static int recycle_all() {
     dataspace_recycle_all();
     memspace_recycle_all();
+    return 0;
 }
 
 
@@ -422,6 +423,10 @@ int main (int argc, char **argv) {
     for ( i = 0; i < n_datasets; ++i ) {
         aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, rank, nprocs);
     }
+
+    flush_multidatasets();
+
+    recycle_all();
     free(dims);
 
     H5Fclose(fid);
