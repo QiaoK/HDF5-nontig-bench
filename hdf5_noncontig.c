@@ -434,6 +434,8 @@ int main (int argc, char **argv) {
     recycle_all();
     free(dims);
 
+    close_datasets(dids, n_datasets);
+
     H5Fclose(fid);
 
     MPI_Finalize ();
