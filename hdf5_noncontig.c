@@ -400,6 +400,11 @@ int main (int argc, char **argv) {
             n_datasets = atoi(optarg);
             break;
         }
+        default: {
+            if (rank == 0) printf("arguments are insufficient\n");
+            MPI_Finalize ();
+            return 1;
+        }
     }
 
     for (i = 0; i < H5S_MAX_RANK; i++) {
