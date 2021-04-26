@@ -34,7 +34,7 @@ static H5D_rw_multi_t *multi_datasets;
 static hid_t *memspace_recycle;
 static hid_t *dataspace_recycle;
 
-int dataspace_recycle_all() {
+static int dataspace_recycle_all() {
     int i;
     //printf("recycle %d dataspace\n", dataspace_recycle_size);
     for ( i = 0; i < dataspace_recycle_size; ++i ) {
@@ -50,7 +50,7 @@ int dataspace_recycle_all() {
     return 0;
 }
 
-int memspace_recycle_all() {
+static int memspace_recycle_all() {
     int i;
     //printf("recycle %d memspace\n", memspace_recycle_size);
     for ( i = 0; i < memspace_recycle_size; ++i ) {
@@ -66,8 +66,13 @@ int memspace_recycle_all() {
     return 0;
 }
 
+static int recycle_all() {
+    dataspace_recycle_all();
+    memspace_recycle_all();
+}
 
-int register_dataspace_recycle(hid_t dsid) {
+
+static int register_dataspace_recycle(hid_t dsid) {
     if (dataspace_recycle_size == dataspace_recycle_size_limit) {
         if ( dataspace_recycle_size_limit > 0 ) {
             dataspace_recycle_size_limit *= 2;
@@ -85,7 +90,7 @@ int register_dataspace_recycle(hid_t dsid) {
     return 0;
 }
 
-int register_memspace_recycle(hid_t msid) {
+static int register_memspace_recycle(hid_t msid) {
     if (memspace_recycle_size == memspace_recycle_size_limit) {
         if ( memspace_recycle_size_limit > 0 ) {
             memspace_recycle_size_limit *= 2;
@@ -103,7 +108,7 @@ int register_memspace_recycle(hid_t msid) {
     return 0;
 }
 
-int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mtype, int write) {
+static int register_multidataset(void *buf, hid_t did, hid_t dsid, hid_t msid, hid_t mtype, int write) {
     if (dataset_size == dataset_size_limit) {
         if ( dataset_size_limit > 0 ) {
             dataset_size_limit *= 2;
@@ -227,7 +232,7 @@ int print_no_collective_cause(uint32_t local_no_collective_cause,uint32_t global
     return 0;
 }
 
-int flush_multidatasets() {
+static int flush_multidatasets() {
     int i;
     uint32_t local_no_collective_cause, global_no_collective_cause;
     int rank;
@@ -358,6 +363,8 @@ int main (int argc, char **argv) {
     int i, ndim, n_datasets, req_count, rank, nprocs;
     size_t req_size = 0;
     hsize_t *dims;
+    hid_t faplid, fid, *dids;
+    char **buf;
 
     memspace_recycle_size = 0;
     memspace_recycle_size_limit = 0;
@@ -395,12 +402,27 @@ int main (int argc, char **argv) {
         one[i]  = 1;
     }
 
+    faplid = H5Pcreate (H5P_FILE_ACCESS);
+    H5Pset_fapl_mpio (faplid, MPI_COMM_WORLD, MPI_INFO_NULL);
+
+    fid = H5Fcreate (outfname, H5F_ACC_TRUNC, H5P_DEFAULT, faplid);
+
     dims = (hsize_t*) malloc(sizeof(hsize_t) * ndim);
     for ( i = 0; i < ndim; ++i ) {
         dims[i] = req_count * req_size * nprocs;
     }
 
+    create_datasets(fid, &dids, n_datasets, ndim, dims);
+
+    fill_data_buffer(&buf, n_datasets, rank, ndim, dims);
+
+    for ( i = 0; i < n_datasets; ++i ) {
+        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, rank, nprocs);
+    }
     free(dims);
+
+    H5Fclose(fid);
+
     MPI_Finalize ();
     return 0;
 }
