@@ -365,6 +365,9 @@ int main (int argc, char **argv) {
     hsize_t *dims;
     hid_t faplid, fid, *dids;
     char **buf;
+    char outfname[128];
+
+    sprintf(outfname, "test.h5");
 
     memspace_recycle_size = 0;
     memspace_recycle_size_limit = 0;
