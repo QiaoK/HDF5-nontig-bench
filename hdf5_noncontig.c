@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h> /* strcpy(), strncpy() */
 #include <unistd.h> /* getopt() */
+#include <math.h>
 #include "hdf5.h"
 
 #define ENABLE_MULTIDATASET 0
@@ -245,7 +246,6 @@ static int flush_multidatasets() {
     int i;
     uint32_t local_no_collective_cause, global_no_collective_cause;
     int rank;
-    hsize_t dims[H5S_MAX_RANK], mdims[H5S_MAX_RANK];
     hid_t dxplid_coll = H5Pcreate (H5P_DATASET_XFER);
     H5Pset_dxpl_mpio (dxplid_coll, H5FD_MPIO_COLLECTIVE);
 
@@ -334,14 +334,16 @@ int close_datasets(hid_t *dids, int n_datasets) {
 }
 
 int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, int rank, int nprocs) {
-    int i;
+    int i, j;
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
     hsize_t total_memspace_size = 1;
+    int req_count_per_dim;
 
     dsid = H5Dget_space (did);
     register_dataspace_recycle(dsid);
 
+    total_memspace_size *= req_size * req_count;
     if (ndim == 1) {
         for ( i = 0; i < req_count; ++i ) {
             start[0] = i * nprocs * req_size + req_size * rank;
@@ -352,7 +354,19 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
                 H5Sselect_hyperslab (dsid, H5S_SELECT_SET, start, NULL, one, block);
             }
         }
-        total_memspace_size *= req_size * req_count;
+    } else if (ndim == 2) {
+        req_count_per_dim = (int) ceil(sqrt(req_count));
+        for ( i = 0; i < req_count; ++i ) {
+            start[0] = (i * nprocs + rank) / req_count_per_dim;
+            start[1] = ((i * nprocs + rank) % req_count_per_dim ) * req_size;
+            block[0] = 1;
+            block[1] = req_size;
+            if ( i ) {
+                H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
+            } else {
+                H5Sselect_hyperslab (dsid, H5S_SELECT_SET, start, NULL, one, block);
+            }
+        }
     }
     msid = H5Screate_simple (1, &total_memspace_size, &total_memspace_size);
     register_memspace_recycle(msid);
@@ -375,8 +389,27 @@ int report_timings(hdf5_noncontig_timing *timings, int rank) {
     return 0;
 }
 
+int set_dataset_dimensions(int ndim, hsize_t *dims, int req_count, int req_size) {
+    int req_count_per_dim;
+    if (ndim == 1) {
+        dims[0] = req_count * nprocs * req_size;
+        printf("ndim = %d, dims[0] = %llu\n", ndim, dims[0])
+    } else if (ndim == 2) {
+        req_count_per_dim = (int) ceil(sqrt(req_count * nprocs));
+        dims[0] = nprocs * req_count / req_count_per_dim;
+        dims[1] = req_count_per_dim;
+        printf("ndim = %d, dims[0] = %llu, dims[1] = %llu\n", ndim, dims[0], dims[1]);
+    } else if (ndim ==3) {
+        req_count_per_dim = (int) ceil(cbrt(req_count * nprocs));
+        dims[0] = nprocs * req_count / (req_count_per_dim * req_count_per_dim);
+        dims[1] = req_count_per_dim;
+        dims[2] = req_count_per_dim;
+        printf("ndim = %d, dims[0] = %llu, dims[1] = %llu, dims[2] = %llu\n", ndim, dims[0], dims[1], dims[2]);
+    }
+}
+
 int main (int argc, char **argv) {
-    int i, ndim, n_datasets, req_count = 0, rank, nprocs;
+    int i, ndim = 1, n_datasets, req_count = 0, rank, nprocs;
     size_t req_size = 0;
     hsize_t *dims;
     hid_t faplid, fid, *dids;
@@ -468,6 +501,7 @@ int main (int argc, char **argv) {
     report_timings(timings, rank);
 
     free(timings);
+    free(dims);
     MPI_Finalize ();
     return 0;
 }
