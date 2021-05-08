@@ -334,7 +334,7 @@ int close_datasets(hid_t *dids, int n_datasets) {
 }
 
 int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, int rank, int nprocs) {
-    int i, j;
+    int i;
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
     hsize_t total_memspace_size = 1;
@@ -389,23 +389,30 @@ int report_timings(hdf5_noncontig_timing *timings, int rank) {
     return 0;
 }
 
-int set_dataset_dimensions(int nprocs, int ndim, hsize_t *dims, int req_count, int req_size) {
+int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int req_count, int req_size) {
     int req_count_per_dim;
     if (ndim == 1) {
         dims[0] = req_count * nprocs * req_size;
-        printf("ndim = %d, dims[0] = %llu\n", ndim, dims[0]);
+        if ( rank == 0 ) {
+            printf("ndim = %d, dims[0] = %llu\n", ndim, dims[0]);
+        }
     } else if (ndim == 2) {
         req_count_per_dim = (int) ceil(sqrt(req_count * nprocs));
         dims[0] = nprocs * req_count / req_count_per_dim;
         dims[1] = req_count_per_dim;
-        printf("ndim = %d, dims[0] = %llu, dims[1] = %llu\n", ndim, dims[0], dims[1]);
+        if ( rank == 0 ) {
+            printf("ndim = %d, dims[0] = %llu, dims[1] = %llu\n", ndim, dims[0], dims[1]);
+        }
     } else if (ndim ==3) {
         req_count_per_dim = (int) ceil(cbrt(req_count * nprocs));
         dims[0] = nprocs * req_count / (req_count_per_dim * req_count_per_dim);
         dims[1] = req_count_per_dim;
         dims[2] = req_count_per_dim;
-        printf("ndim = %d, dims[0] = %llu, dims[1] = %llu, dims[2] = %llu\n", ndim, dims[0], dims[1], dims[2]);
+        if ( rank == 0 ) {
+            printf("ndim = %d, dims[0] = %llu, dims[1] = %llu, dims[2] = %llu\n", ndim, dims[0], dims[1], dims[2]);
+        }
     }
+    return 0;
 }
 
 int main (int argc, char **argv) {
@@ -499,7 +506,6 @@ int main (int argc, char **argv) {
     report_timings(timings, rank);
 
     free(timings);
-    free(dims);
     MPI_Finalize ();
     return 0;
 }
