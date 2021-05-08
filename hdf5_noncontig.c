@@ -368,14 +368,6 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     return 0;
 }
 
-typedef struct hdf5_noncontig_timing {
-    double file_create;
-    double dataset_create;
-    double dataset_write;
-    double dataset_close;
-    double file_close;
-} hdf5_noncontig_timing;
-
 int report_timings(hdf5_noncontig_timing *timings, int rank) {
     hdf5_noncontig_timing max_times;
     MPI_Reduce(timings, &max_times, sizeof(hdf5_noncontig_timing) / sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
