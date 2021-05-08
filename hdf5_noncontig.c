@@ -21,6 +21,14 @@ typedef struct H5D_rw_multi_t
 } H5D_rw_multi_t;
 #endif
 
+typedef struct hdf5_noncontig_timing {
+    double file_create;
+    double dataset_create;
+    double dataset_write;
+    double dataset_close;
+    double file_close;
+} hdf5_noncontig_timing;
+
 static int dataset_size;
 static int dataset_size_limit;
 static int dataspace_recycle_size;
@@ -360,6 +368,27 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     return 0;
 }
 
+typedef struct hdf5_noncontig_timing {
+    double file_create;
+    double dataset_create;
+    double dataset_write;
+    double dataset_close;
+    double file_close;
+} hdf5_noncontig_timing;
+
+int report_timings(hdf5_noncontig_timing *timings, int rank) {
+    hdf5_noncontig_timing max_times;
+    MPI_Reduce(timings, &max_times, sizeof(hdf5_noncontig_timing) / sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        printf("file create   : %lf (%lf) seconds\n", timings->file_create, max_times.file_create);
+        printf("dataset create: %lf (%lf) seconds\n", timings->dataset_create, max_times.dataset_create);
+        printf("file creation : %lf (%lf) seconds\n", timings->dataset_create, max_times.dataset_write);
+        printf("dataset close : %lf (%lf) seconds\n", timings->dataset_close, max_times.dataset_close);
+        printf("file close    : %lf (%lf) seconds\n", timings->file_close, max_times.file_close);
+    }
+}
+
 int main (int argc, char **argv) {
     int i, ndim, n_datasets, req_count, rank, nprocs;
     size_t req_size = 0;
@@ -367,6 +396,8 @@ int main (int argc, char **argv) {
     hid_t faplid, fid, *dids;
     char **buf;
     char outfname[128];
+    hdf5_noncontig_timing *timing;
+    double start;
 
     sprintf(outfname, "test.h5");
 
@@ -410,34 +441,46 @@ int main (int argc, char **argv) {
     for (i = 0; i < H5S_MAX_RANK; i++) {
         one[i]  = 1;
     }
+    timings = Calloc(1, sizeof(hdf5_noncontig_timing));
 
+    start = MPI_Wtime();
     faplid = H5Pcreate (H5P_FILE_ACCESS);
     H5Pset_fapl_mpio (faplid, MPI_COMM_WORLD, MPI_INFO_NULL);
 
     fid = H5Fcreate (outfname, H5F_ACC_TRUNC, H5P_DEFAULT, faplid);
+    timings->file_create = MPI_Wtime() - start;
 
     dims = (hsize_t*) malloc(sizeof(hsize_t) * ndim);
     for ( i = 0; i < ndim; ++i ) {
         dims[i] = req_count * req_size * nprocs;
     }
-
+    start = MPI_Wtime();
     create_datasets(fid, &dids, n_datasets, ndim, dims);
+    timings->dataset_create = MPI_Wtime() - start;
 
     fill_data_buffer(&buf, n_datasets, rank, ndim, dims);
 
+    start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
         aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, rank, nprocs);
     }
+    timings->dataset_write = MPI_Wtime() - start;
 
     flush_multidatasets();
 
     recycle_all();
     free(dims);
 
+    start = MPI_Wtime();
     close_datasets(dids, n_datasets);
+    timings->dataset_write = MPI_Wtime() - start;
 
+    start = MPI_Wtime();
     H5Fclose(fid);
+    timings->file_close = MPI_Wtime() - start;
 
+
+    free(timings);
     MPI_Finalize ();
     return 0;
 }
