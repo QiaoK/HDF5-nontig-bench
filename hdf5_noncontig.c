@@ -379,6 +379,8 @@ int report_timings(hdf5_noncontig_timing *timings, int rank) {
         printf("dataset close : %lf (%lf) seconds\n", timings->dataset_close, max_times.dataset_close);
         printf("file close    : %lf (%lf) seconds\n", timings->file_close, max_times.file_close);
     }
+
+    return 0;
 }
 
 int main (int argc, char **argv) {
@@ -388,7 +390,7 @@ int main (int argc, char **argv) {
     hid_t faplid, fid, *dids;
     char **buf;
     char outfname[128];
-    hdf5_noncontig_timing *timing;
+    hdf5_noncontig_timing *timings;
     double start;
 
     sprintf(outfname, "test.h5");
@@ -471,6 +473,7 @@ int main (int argc, char **argv) {
     H5Fclose(fid);
     timings->file_close = MPI_Wtime() - start;
 
+    report_timings(timings, rank);
 
     free(timings);
     MPI_Finalize ();
