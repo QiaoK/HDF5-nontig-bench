@@ -245,7 +245,6 @@ static int flush_multidatasets() {
     int i;
     uint32_t local_no_collective_cause, global_no_collective_cause;
     int rank;
-    size_t esize;
     hsize_t dims[H5S_MAX_RANK], mdims[H5S_MAX_RANK];
     hid_t dxplid_coll = H5Pcreate (H5P_DATASET_XFER);
     H5Pset_dxpl_mpio (dxplid_coll, H5FD_MPIO_COLLECTIVE);
@@ -269,13 +268,6 @@ static int flush_multidatasets() {
 
     }
 #endif
-
-    for ( i = 0; i < dataset_size; ++i ) {
-        H5Sget_simple_extent_dims (multi_datasets[i].mem_space_id, dims, mdims);
-        esize = H5Tget_size (multi_datasets[i].mem_type_id);
-    }
-
-    //printf("rank %d number of hyperslab called %d\n", rank, hyperslab_count);
 
     if (dataset_size) {
         free(multi_datasets);
@@ -342,7 +334,7 @@ int close_datasets(hid_t *dids, int n_datasets) {
 }
 
 int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, int rank, int nprocs) {
-    int i, j;
+    int i;
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
     hsize_t total_memspace_size = 1;
@@ -384,7 +376,7 @@ int report_timings(hdf5_noncontig_timing *timings, int rank) {
 }
 
 int main (int argc, char **argv) {
-    int i, ndim, n_datasets, req_count, rank, nprocs;
+    int i, ndim, n_datasets, req_count = 0, rank, nprocs;
     size_t req_size = 0;
     hsize_t *dims;
     hid_t faplid, fid, *dids;
@@ -435,7 +427,7 @@ int main (int argc, char **argv) {
     for (i = 0; i < H5S_MAX_RANK; i++) {
         one[i]  = 1;
     }
-    timings = Calloc(1, sizeof(hdf5_noncontig_timing));
+    timings = calloc(1, sizeof(hdf5_noncontig_timing));
 
     start = MPI_Wtime();
     faplid = H5Pcreate (H5P_FILE_ACCESS);
