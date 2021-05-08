@@ -389,11 +389,11 @@ int report_timings(hdf5_noncontig_timing *timings, int rank) {
     return 0;
 }
 
-int set_dataset_dimensions(int ndim, hsize_t *dims, int req_count, int req_size) {
+int set_dataset_dimensions(int nprocs, int ndim, hsize_t *dims, int req_count, int req_size) {
     int req_count_per_dim;
     if (ndim == 1) {
         dims[0] = req_count * nprocs * req_size;
-        printf("ndim = %d, dims[0] = %llu\n", ndim, dims[0])
+        printf("ndim = %d, dims[0] = %llu\n", ndim, dims[0]);
     } else if (ndim == 2) {
         req_count_per_dim = (int) ceil(sqrt(req_count * nprocs));
         dims[0] = nprocs * req_count / req_count_per_dim;
@@ -470,9 +470,7 @@ int main (int argc, char **argv) {
     timings->file_create = MPI_Wtime() - start;
 
     dims = (hsize_t*) malloc(sizeof(hsize_t) * ndim);
-    for ( i = 0; i < ndim; ++i ) {
-        dims[i] = req_count * req_size * nprocs;
-    }
+    set_dataset_dimensions(nprocs, ndim, dims, req_count, req_size);
     start = MPI_Wtime();
     create_datasets(fid, &dids, n_datasets, ndim, dims);
     timings->dataset_create = MPI_Wtime() - start;
