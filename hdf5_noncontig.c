@@ -477,7 +477,7 @@ int main (int argc, char **argv) {
     timings->file_create = MPI_Wtime() - start;
 
     dims = (hsize_t*) malloc(sizeof(hsize_t) * ndim);
-    set_dataset_dimensions(nprocs, ndim, dims, req_count, req_size);
+    set_dataset_dimensions(rank, procs, ndim, dims, req_count, req_size);
     start = MPI_Wtime();
     create_datasets(fid, &dids, n_datasets, ndim, dims);
     timings->dataset_create = MPI_Wtime() - start;
