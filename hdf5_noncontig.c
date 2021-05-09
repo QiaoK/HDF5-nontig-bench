@@ -543,7 +543,7 @@ int main (int argc, char **argv) {
 
     start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
-        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, rank, nprocs, req_offset, req_length);
+        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
     }
     timings->dataset_write = MPI_Wtime() - start;
 
