@@ -367,8 +367,8 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
             start[1] = ( ((i * nprocs + rank) * req_size) % (dims[2] * dims[1]) ) / dims[2];
             start[2] = ( (i * nprocs + rank) * req_size) % dims[2];
             block[0] = 1;
-            block[0] = 1;
-            block[1] = req_size;
+            block[1] = 1;
+            block[2] = req_size;
             if ( i ) {
                 H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
             } else {
