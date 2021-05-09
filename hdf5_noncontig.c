@@ -4,6 +4,7 @@
 #include <unistd.h> /* getopt() */
 #include <math.h>
 #include "hdf5.h"
+#include "random.h"
 
 #define ENABLE_MULTIDATASET 0
 #define MULTIDATASET_DEFINE 1
@@ -330,7 +331,7 @@ int close_datasets(hid_t *dids, int n_datasets) {
     return 0;
 }
 
-int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, int rank, int nprocs, hsize_t *req_offset, hsize_t *req_length) {
+int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, hsize_t *req_offset, hsize_t *req_length) {
     int i;
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
@@ -363,7 +364,7 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
         }
     } else if (ndim == 3) {
         for ( i = 0; i < req_count; ++i ) {
-            start[0] = ( req_offset[i] / (dims[1] * dims[2]);
+            start[0] = req_offset[i] / (dims[1] * dims[2]);
             start[1] = ( req_offset[i] % (dims[2] * dims[1]) ) / dims[2];
             start[2] = req_offset[i] % dims[2];
             block[0] = 1;
