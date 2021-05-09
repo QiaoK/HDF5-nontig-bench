@@ -338,7 +338,6 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
     hsize_t total_memspace_size = 1;
-    int req_count_per_dim;
 
     dsid = H5Dget_space (did);
     register_dataspace_recycle(dsid);
@@ -355,10 +354,9 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
             }
         }
     } else if (ndim == 2) {
-        req_count_per_dim = (int) ceil(sqrt(req_count));
         for ( i = 0; i < req_count; ++i ) {
-            start[0] = (i * nprocs + rank) / req_count_per_dim;
-            start[1] = ((i * nprocs + rank) % req_count_per_dim ) * req_size;
+            start[0] = (i * nprocs + rank) / dims[1];
+            start[1] = ((i * nprocs + rank) % dims[1] ) * req_size;
             block[0] = 1;
             block[1] = req_size;
             if ( i ) {
@@ -477,7 +475,7 @@ int main (int argc, char **argv) {
     timings->file_create = MPI_Wtime() - start;
 
     dims = (hsize_t*) malloc(sizeof(hsize_t) * ndim);
-    set_dataset_dimensions(rank, procs, ndim, dims, req_count, req_size);
+    set_dataset_dimensions(rank, nprocs, ndim, dims, req_count, req_size);
     start = MPI_Wtime();
     create_datasets(fid, &dids, n_datasets, ndim, dims);
     timings->dataset_create = MPI_Wtime() - start;
