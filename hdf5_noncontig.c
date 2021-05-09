@@ -423,6 +423,29 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
     return 0;
 }
 
+int initialize_requests(int rank, int nprocs, int type, int req_count, int req_size, hsize_t **req_offset, hsize_t **req_length) {
+    int i;
+    int *random_array;
+    switch (type) {
+        case 0: {
+            *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
+            *req_length = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
+            for ( i = 0; i < req_count; ++i ) {
+                req_offset[i] = (i * nprocs + rank) * req_size;
+                req_length[i] = req_size;
+            }
+        }
+        case 1: {
+            *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
+            *req_length = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
+            random_array = (int*) malloc(sizeof(int) * nprocs * req_count);
+            for ( i = 0; i < nprocs * req_count; ++i ) {
+                random_array[i] = i;
+            }
+        }
+    }
+}
+
 int main (int argc, char **argv) {
     int i, ndim = 1, n_datasets = 1, req_count = 0, rank, nprocs;
     size_t req_size = 0;
@@ -432,6 +455,7 @@ int main (int argc, char **argv) {
     char outfname[128];
     hdf5_noncontig_timing *timings;
     double start;
+    hsize_t *req_offset, *req_length;
 
     sprintf(outfname, "test.h5");
 

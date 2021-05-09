@@ -11,7 +11,7 @@ LIBS = -lhdf5
 
 all: hdf5_noncontig
 
-hdf5_noncontig: hdf5_noncontig.o
+hdf5_noncontig: hdf5_noncontig.o random.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 clean:
