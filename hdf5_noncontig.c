@@ -351,8 +351,22 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
         }
     } else if (ndim == 2) {
         for ( i = 0; i < req_count; ++i ) {
-            start[0] = (i * nprocs + rank) / dims[1];
+            start[0] = ((i * nprocs + rank) * req_size) / dims[1];
             start[1] = ((i * nprocs + rank) * req_size ) % dims[1];
+            block[0] = 1;
+            block[1] = req_size;
+            if ( i ) {
+                H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
+            } else {
+                H5Sselect_hyperslab (dsid, H5S_SELECT_SET, start, NULL, one, block);
+            }
+        }
+    } else if (ndim == 3) {
+        for ( i = 0; i < req_count; ++i ) {
+            start[0] = ( ((i * nprocs + rank) * req_size) / (dims[1] * dims[2]);
+            start[1] = ( ((i * nprocs + rank) * req_size) % (dims[2] * dims[1]) / dims[2];
+            start[2] = ((i * nprocs + rank) * req_size) % dims[2];
+            block[0] = 1;
             block[0] = 1;
             block[1] = req_size;
             if ( i ) {
@@ -410,7 +424,7 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
 }
 
 int main (int argc, char **argv) {
-    int i, ndim = 1, n_datasets, req_count = 0, rank, nprocs;
+    int i, ndim = 1, n_datasets = 1, req_count = 0, rank, nprocs;
     size_t req_size = 0;
     hsize_t *dims;
     hid_t faplid, fid, *dids;
