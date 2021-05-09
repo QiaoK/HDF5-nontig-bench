@@ -413,7 +413,7 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
         }
     } else if (ndim ==3) {
         req_count_per_dim = (int) ceil(cbrt(req_count * nprocs));
-        dims[0] = nprocs * req_count / (req_count_per_dim * req_count_per_dim);
+        dims[0] = (nprocs * req_count + req_count_per_dim * req_count_per_dim - 1) / (req_count_per_dim * req_count_per_dim);
         dims[1] = req_count_per_dim;
         dims[2] = req_count_per_dim * req_size;
         if ( rank == 0 ) {
