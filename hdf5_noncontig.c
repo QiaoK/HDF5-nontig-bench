@@ -277,12 +277,9 @@ static int flush_multidatasets() {
     return 0;
 }
 
-int fill_data_buffer(char*** buf, int n_datasets, int rank, int ndim, hsize_t *dims) {
+int fill_data_buffer(char*** buf, int n_datasets, int rank, hsize_t total_data_size) {
     int i;
-    hsize_t total_data_size = 1, j;
-    for ( i = 0; i < ndim; ++i ) {
-        total_data_size *= dims[i];
-    }
+    hsize_t j;
 
     buf[0] = (char**) malloc(sizeof(char*) * n_datasets);
     for ( i = 0; i < n_datasets; ++i ) {
@@ -337,12 +334,11 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     int i;
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
-    hsize_t total_memspace_size = 1;
+    hsize_t total_memspace_size = req_size * req_count;
 
     dsid = H5Dget_space (did);
     register_dataspace_recycle(dsid);
 
-    total_memspace_size *= req_size * req_count;
     if (ndim == 1) {
         for ( i = 0; i < req_count; ++i ) {
             start[0] = i * nprocs * req_size + req_size * rank;
@@ -480,7 +476,7 @@ int main (int argc, char **argv) {
     create_datasets(fid, &dids, n_datasets, ndim, dims);
     timings->dataset_create = MPI_Wtime() - start;
 
-    fill_data_buffer(&buf, n_datasets, rank, ndim, dims);
+    fill_data_buffer(&buf, n_datasets, rank, req_count * req_size);
 
     start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
