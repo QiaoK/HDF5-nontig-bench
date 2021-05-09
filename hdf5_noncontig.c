@@ -330,7 +330,7 @@ int close_datasets(hid_t *dids, int n_datasets) {
     return 0;
 }
 
-int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, int rank, int nprocs) {
+int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, int rank, int nprocs, hsize_t *req_offset, hsize_t *req_length) {
     int i;
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
@@ -341,8 +341,8 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
 
     if (ndim == 1) {
         for ( i = 0; i < req_count; ++i ) {
-            start[0] = i * nprocs * req_size + req_size * rank;
-            block[0] = req_size;
+            start[0] = req_offset[i];
+            block[0] = req_length[i];
             if ( i ) {
                 H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
             } else {
@@ -351,10 +351,10 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
         }
     } else if (ndim == 2) {
         for ( i = 0; i < req_count; ++i ) {
-            start[0] = ((i * nprocs + rank) * req_size) / dims[1];
-            start[1] = ((i * nprocs + rank) * req_size ) % dims[1];
+            start[0] = req_offset[i] / dims[1];
+            start[1] = req_offset[i] % dims[1];
             block[0] = 1;
-            block[1] = req_size;
+            block[1] = req_length[i];
             if ( i ) {
                 H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
             } else {
@@ -363,12 +363,12 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
         }
     } else if (ndim == 3) {
         for ( i = 0; i < req_count; ++i ) {
-            start[0] = ( (i * nprocs + rank) * req_size) / (dims[1] * dims[2]);
-            start[1] = ( ((i * nprocs + rank) * req_size) % (dims[2] * dims[1]) ) / dims[2];
-            start[2] = ( (i * nprocs + rank) * req_size) % dims[2];
+            start[0] = ( req_offset[i] / (dims[1] * dims[2]);
+            start[1] = ( req_offset[i] % (dims[2] * dims[1]) ) / dims[2];
+            start[2] = req_offset[i] % dims[2];
             block[0] = 1;
             block[1] = 1;
-            block[2] = req_size;
+            block[2] = req_length[i];
             if ( i ) {
                 H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
             } else {
@@ -423,6 +423,21 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
     return 0;
 }
 
+void shuffle(int *array, size_t n)
+{
+    if (n > 1) 
+    {
+        size_t i;
+        for (i = 1; i < n ; i++) 
+        {
+          size_t j = genrand_int32() % ( n - i + 1);
+          int t = array[j];
+          array[j] = array[i];
+          array[i] = t;
+        }
+    }
+}
+
 int initialize_requests(int rank, int nprocs, int type, int req_count, int req_size, hsize_t **req_offset, hsize_t **req_length) {
     int i;
     int *random_array;
@@ -431,16 +446,19 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
             *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
             *req_length = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
             for ( i = 0; i < req_count; ++i ) {
-                req_offset[i] = (i * nprocs + rank) * req_size;
-                req_length[i] = req_size;
+                req_offset[0][i] = (i * nprocs + rank) * req_size;
+                req_length[0][i] = req_size;
             }
         }
         case 1: {
             *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
             *req_length = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
-            random_array = (int*) malloc(sizeof(int) * nprocs * req_count);
-            for ( i = 0; i < nprocs * req_count; ++i ) {
-                random_array[i] = i;
+            if (rank ==0) {
+                random_array = (int*) malloc(sizeof(int) * nprocs * req_count);
+                for ( i = 0; i < nprocs * req_count; ++i ) {
+                    random_array[i] = i;
+                }
+                shuffle(random_array, nprocs * req_count);
             }
         }
     }
@@ -456,6 +474,8 @@ int main (int argc, char **argv) {
     hdf5_noncontig_timing *timings;
     double start;
     hsize_t *req_offset, *req_length;
+
+    init_genrand(5555);
 
     sprintf(outfname, "test.h5");
 
@@ -515,10 +535,11 @@ int main (int argc, char **argv) {
     timings->dataset_create = MPI_Wtime() - start;
 
     fill_data_buffer(&buf, n_datasets, rank, req_count * req_size);
+    initialize_requests(rank, nprocs, 0, req_count, req_size, &req_offset, &req_length);
 
     start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
-        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, rank, nprocs);
+        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, rank, nprocs, req_offset, req_length);
     }
     timings->dataset_write = MPI_Wtime() - start;
 
