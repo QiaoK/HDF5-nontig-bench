@@ -397,7 +397,7 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
     } else if (ndim == 2) {
         req_count_per_dim = (int) ceil(sqrt(req_count * nprocs));
         dims[0] = nprocs * req_count / req_count_per_dim;
-        dims[1] = req_count_per_dim;
+        dims[1] = req_count_per_dim * req_size;
         if ( rank == 0 ) {
             printf("ndim = %d, dims[0] = %llu, dims[1] = %llu\n", ndim, dims[0], dims[1]);
         }
@@ -405,7 +405,7 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
         req_count_per_dim = (int) ceil(cbrt(req_count * nprocs));
         dims[0] = nprocs * req_count / (req_count_per_dim * req_count_per_dim);
         dims[1] = req_count_per_dim;
-        dims[2] = req_count_per_dim;
+        dims[2] = req_count_per_dim * req_size;
         if ( rank == 0 ) {
             printf("ndim = %d, dims[0] = %llu, dims[1] = %llu, dims[2] = %llu\n", ndim, dims[0], dims[1], dims[2]);
         }
