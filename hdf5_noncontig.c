@@ -449,6 +449,7 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
                 req_offset[0][i] = (i * nprocs + rank) * req_size;
                 req_length[0][i] = req_size;
             }
+            break;
         }
         case 1: {
             *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
@@ -460,8 +461,10 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
                 }
                 shuffle(random_array, nprocs * req_count);
             }
+            break;
         }
     }
+    return 0;
 }
 
 int main (int argc, char **argv) {
