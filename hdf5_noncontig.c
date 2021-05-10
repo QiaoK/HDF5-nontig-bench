@@ -488,7 +488,7 @@ int main (int argc, char **argv) {
     hdf5_noncontig_timing *timings;
     double start;
     hsize_t *req_offset, *req_length;
-    int req_type;
+    int req_type = 0;
 
     init_genrand(5555);
 
@@ -507,7 +507,7 @@ int main (int argc, char **argv) {
     MPI_Comm_rank (MPI_COMM_WORLD, &rank);
     MPI_Comm_size (MPI_COMM_WORLD, &nprocs);
 
-    while ((i = getopt (argc, argv, "d:s:n:c:")) != EOF) switch (i) {
+    while ((i = getopt (argc, argv, "td:s:n:c:")) != EOF) switch (i) {
         case 'c': {
             req_count = atoi(optarg);
             break;
