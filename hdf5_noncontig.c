@@ -465,6 +465,7 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
             } else {
                 MPI_Scatter(NULL, 0, MPI_BYTE, req_offset, req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
             }
+            printf("checkpoint\n");
             for ( i = 0; i < req_count; ++i ) {
                 req_length[0][i] = req_size;
                 printf("rank = %d, req_offset[%d] = %llu\n", rank, i, (long long unsigned) req_offset[i]);
