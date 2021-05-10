@@ -461,9 +461,9 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
                     random_array[i] = i * req_size;
                 }
                 shuffle(random_array, nprocs * req_count);
-                MPI_Scatter(random_array, req_count * sizeof(hsize_t), MPI_BYTE, req_offset, req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
+                MPI_Scatter(random_array, req_count * sizeof(hsize_t), MPI_BYTE, req_offset[0], req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
             } else {
-                MPI_Scatter(NULL, 0, MPI_BYTE, req_offset, req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
+                MPI_Scatter(NULL, 0, MPI_BYTE, req_offset[0], req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
             }
             for ( i = 0; i < req_count; ++i ) {
                 req_length[0][i] = req_size;
