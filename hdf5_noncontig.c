@@ -467,7 +467,7 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
             }
             for ( i = 0; i < req_count; ++i ) {
                 req_length[0][i] = req_size;
-                printf("rank = %d, req_offset[%d] = %llu\n", rank, i, (long long unsigned) req_offse[0][i]);
+                printf("rank = %d, req_offset[%d] = %llu\n", rank, i, (long long unsigned) req_offset[0][i]);
             }
             break;
         }
