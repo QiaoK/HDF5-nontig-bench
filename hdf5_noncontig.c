@@ -536,7 +536,9 @@ int main (int argc, char **argv) {
             return 1;
         }
     }
-
+    if (rank == 0) {
+        printf("req_count = %d, req_size = %d, ndim = %d, n_datasets = %d, req_type = %d", req_count, req_size, ndim, n_datasets, req_type);
+    }
     for (i = 0; i < H5S_MAX_RANK; i++) {
         one[i]  = 1;
     }
