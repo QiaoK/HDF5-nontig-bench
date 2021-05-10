@@ -390,7 +390,7 @@ int report_timings(hdf5_noncontig_timing *timings, int rank) {
     if (rank == 0) {
         printf("file create   : %lf (%lf) seconds\n", timings->file_create, max_times.file_create);
         printf("dataset create: %lf (%lf) seconds\n", timings->dataset_create, max_times.dataset_create);
-        printf("file creation : %lf (%lf) seconds\n", timings->dataset_create, max_times.dataset_write);
+        printf("dataset write : %lf (%lf) seconds\n", timings->dataset_write, max_times.dataset_write);
         printf("dataset close : %lf (%lf) seconds\n", timings->dataset_close, max_times.dataset_close);
         printf("file close    : %lf (%lf) seconds\n", timings->file_close, max_times.file_close);
     }
@@ -537,7 +537,7 @@ int main (int argc, char **argv) {
         }
     }
     if (rank == 0) {
-        printf("req_count = %d, req_size = %ld, ndim = %d, n_datasets = %d, req_type = %d", req_count, req_size, ndim, n_datasets, req_type);
+        printf("req_count = %d, req_size = %ld, ndim = %d, n_datasets = %d, req_type = %d\n", req_count, req_size, ndim, n_datasets, req_type);
     }
     for (i = 0; i < H5S_MAX_RANK; i++) {
         one[i]  = 1;
