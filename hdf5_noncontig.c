@@ -424,15 +424,15 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
     return 0;
 }
 
-void shuffle(int *array, size_t n)
+void shuffle(hsize_t *array, hsize_t n)
 {
     if (n > 1) 
     {
-        size_t i;
+        hsize_t i;
         for (i = 1; i < n ; i++) 
         {
-          size_t j = genrand_int32() % ( n - i + 1);
-          int t = array[j];
+          hsize_t j = genrand_int32() % ( n - i + 1);
+          hsize_t t = array[j];
           array[j] = array[i];
           array[i] = t;
         }
@@ -441,7 +441,7 @@ void shuffle(int *array, size_t n)
 
 int initialize_requests(int rank, int nprocs, int type, int req_count, int req_size, hsize_t **req_offset, hsize_t **req_length) {
     int i;
-    int *random_array;
+    hsize_t *random_array;
     switch (type) {
         case 0: {
             *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
@@ -456,15 +456,25 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
             *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
             *req_length = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
             if (rank ==0) {
-                random_array = (int*) malloc(sizeof(int) * nprocs * req_count);
+                random_array = (hsize_t*) malloc(sizeof(hsize_t) * nprocs * req_count);
                 for ( i = 0; i < nprocs * req_count; ++i ) {
-                    random_array[i] = i;
+                    random_array[i] = i * req_size;
                 }
                 shuffle(random_array, nprocs * req_count);
+            }
+            MPI_Scatter(random_array, req_count * sizeof(hsize_t), MPI_BYTE, req_offset, req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
+            for ( i = 0; i < req_count; ++i ) {
+                req_length[0][i] = req_size;
             }
             break;
         }
     }
+    return 0;
+}
+
+int finalize_requests(hsize_t *req_offset, hsize_t *req_length) {
+    free(req_offset);
+    free(req_length);
     return 0;
 }
 
@@ -478,6 +488,7 @@ int main (int argc, char **argv) {
     hdf5_noncontig_timing *timings;
     double start;
     hsize_t *req_offset, *req_length;
+    int req_type;
 
     init_genrand(5555);
 
@@ -513,6 +524,10 @@ int main (int argc, char **argv) {
             n_datasets = atoi(optarg);
             break;
         }
+        case 't': {
+            req_type = atoi(optarg);
+            break;
+        }
         default: {
             if (rank == 0) printf("arguments are insufficient\n");
             MPI_Finalize ();
@@ -539,7 +554,7 @@ int main (int argc, char **argv) {
     timings->dataset_create = MPI_Wtime() - start;
 
     fill_data_buffer(&buf, n_datasets, rank, req_count * req_size);
-    initialize_requests(rank, nprocs, 0, req_count, req_size, &req_offset, &req_length);
+    initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
 
     start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
@@ -551,6 +566,8 @@ int main (int argc, char **argv) {
 
     recycle_all();
     free(dims);
+
+    finalize_requests(req_offset, req_length);
 
     start = MPI_Wtime();
     close_datasets(dids, n_datasets);
