@@ -575,7 +575,7 @@ int main (int argc, char **argv) {
 
     start = MPI_Wtime();
     close_datasets(dids, n_datasets);
-    timings->dataset_write = MPI_Wtime() - start;
+    timings->dataset_close = MPI_Wtime() - start;
 
     start = MPI_Wtime();
     H5Fclose(fid);
