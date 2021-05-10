@@ -441,7 +441,7 @@ void shuffle(hsize_t *array, hsize_t n)
 
 int initialize_requests(int rank, int nprocs, int type, int req_count, int req_size, hsize_t **req_offset, hsize_t **req_length) {
     int i;
-    hsize_t *random_array;
+    hsize_t *random_array = NULL;
     switch (type) {
         case 0: {
             *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
@@ -461,6 +461,9 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
                     random_array[i] = i * req_size;
                 }
                 shuffle(random_array, nprocs * req_count);
+            }
+            for ( i = 0; i < nprocs * req_count; ++i ) {
+                printf("%llu\n", (long long unsigned)random_array[i]);
             }
             MPI_Scatter(random_array, req_count * sizeof(hsize_t), MPI_BYTE, req_offset, req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
             for ( i = 0; i < req_count; ++i ) {
