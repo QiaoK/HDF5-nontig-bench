@@ -26,6 +26,7 @@ typedef struct H5D_rw_multi_t
 typedef struct hdf5_noncontig_timing {
     double file_create;
     double dataset_create;
+    double dataset_hyperslab;
     double dataset_write;
     double dataset_close;
     double file_close;
@@ -331,7 +332,7 @@ int close_datasets(hid_t *dids, int n_datasets) {
     return 0;
 }
 
-int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, hsize_t *dims, hsize_t *req_offset, hsize_t *req_length) {
+int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, const hsize_t *dims, const hsize_t *req_offset, const hsize_t *req_length) {
     int i;
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
@@ -390,6 +391,7 @@ int report_timings(hdf5_noncontig_timing *timings, int rank) {
     if (rank == 0) {
         printf("file create   : %lf (%lf) seconds\n", timings->file_create, max_times.file_create);
         printf("dataset create: %lf (%lf) seconds\n", timings->dataset_create, max_times.dataset_create);
+        printf("dataset hyperslab: %lf (%lf) seconds\n", timings->dataset_hyperslab, max_times.dataset_hyperslab);
         printf("dataset write : %lf (%lf) seconds\n", timings->dataset_write, max_times.dataset_write);
         printf("dataset close : %lf (%lf) seconds\n", timings->dataset_close, max_times.dataset_close);
         printf("file close    : %lf (%lf) seconds\n", timings->file_close, max_times.file_close);
@@ -564,10 +566,11 @@ int main (int argc, char **argv) {
     for ( i = 0; i < n_datasets; ++i ) {
         aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
     }
-    timings->dataset_write = MPI_Wtime() - start;
+    timings->dataset_hyperslab = MPI_Wtime() - start;
 
+    start = MPI_Wtime();
     flush_multidatasets();
-
+    timings->dataset_write = MPI_Wtime() - start;
     recycle_all();
     free(dims);
 
