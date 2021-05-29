@@ -539,7 +539,7 @@ int main (int argc, char **argv) {
         }
     }
     if (rank == 0) {
-        printf("req_count = %d, req_size = %ld, ndim = %d, n_datasets = %d, req_type = %d\n", req_count, req_size, ndim, n_datasets, req_type);
+        printf("req_count = %d, req_size = %ld, ndim = %d, n_datasets = %d, req_type = %d, total data size = %ld MiB\n", req_count, req_size, ndim, n_datasets, req_type, n_datasets * req_count * req_size * nprocs / 1048576);
     }
     for (i = 0; i < H5S_MAX_RANK; i++) {
         one[i]  = 1;
@@ -582,6 +582,7 @@ int main (int argc, char **argv) {
 
     start = MPI_Wtime();
     H5Fclose(fid);
+    H5Pclose(faplid);
     timings->file_close = MPI_Wtime() - start;
 
     report_timings(timings, rank);
