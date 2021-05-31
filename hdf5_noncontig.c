@@ -530,7 +530,7 @@ int finalize_requests(hsize_t *req_offset, hsize_t *req_length) {
     return 0;
 }
 
-int process_read(int rank, int nprocs, int n_datasets, int ndim int req_count, size_t req_size, int req_type) {
+int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, int req_type) {
     char **buf;
     hsize_t *dims;
     hid_t faplid, fid, *dids;
@@ -590,7 +590,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim int req_count, s
     return 0;
 }
 
-int process_write(int rank, int nprocs, int n_datasets, int ndim int req_count, size_t req_size, int req_type) {
+int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, int req_type) {
     char **buf;
     hsize_t *dims;
     hid_t faplid, fid, *dids;
@@ -713,10 +713,10 @@ int main (int argc, char **argv) {
         one[i]  = 1;
     }
     if (write_flag) {
-        process_write(rank, nprocs, n_datasets, ndim req_count, req_size, req_type);
+        process_write(rank, nprocs, n_datasets, ndim, req_count, req_size, req_type);
     }
     if (read_flag) {
-        process_read(rank, nprocs, n_datasets, ndim req_count, req_size, req_type);
+        process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_type);
     }
     MPI_Finalize ();
     return 0;
