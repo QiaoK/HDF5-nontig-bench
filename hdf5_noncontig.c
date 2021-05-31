@@ -432,17 +432,17 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     return 0;
 }
 
-int report_timings(hdf5_noncontig_timing *timings, int rank) {
+int report_timings(hdf5_noncontig_timing *timings, int rank, const char *prefix) {
     hdf5_noncontig_timing max_times;
     MPI_Reduce(timings, &max_times, sizeof(hdf5_noncontig_timing) / sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
-        printf("file create   : %lf (%lf) seconds\n", timings->file_create, max_times.file_create);
-        printf("dataset create: %lf (%lf) seconds\n", timings->dataset_create, max_times.dataset_create);
-        printf("dataset hyperslab: %lf (%lf) seconds\n", timings->dataset_hyperslab, max_times.dataset_hyperslab);
-        printf("dataset I/O : %lf (%lf) seconds\n", timings->dataset_io, max_times.dataset_io);
-        printf("dataset close : %lf (%lf) seconds\n", timings->dataset_close, max_times.dataset_close);
-        printf("file close    : %lf (%lf) seconds\n", timings->file_close, max_times.file_close);
+        printf("%s file create   : %lf (%lf) seconds\n", prefix, timings->file_create, max_times.file_create);
+        printf("%s dataset create: %lf (%lf) seconds\n", prefix, timings->dataset_create, max_times.dataset_create);
+        printf("%s dataset hyperslab: %lf (%lf) seconds\n", prefix, timings->dataset_hyperslab, max_times.dataset_hyperslab);
+        printf("%s dataset I/O : %lf (%lf) seconds\n", prefix, timings->dataset_io, max_times.dataset_io);
+        printf("%s dataset close : %lf (%lf) seconds\n", prefix, timings->dataset_close, max_times.dataset_close);
+        printf("%s file close    : %lf (%lf) seconds\n", prefix, timings->file_close, max_times.file_close);
     }
 
     return 0;
@@ -585,7 +585,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     H5Pclose(faplid);
     timings->file_close = MPI_Wtime() - start;
 
-    report_timings(timings, rank);
+    report_timings(timings, rank, "HDF5 read");
 
     free(timings);
     return 0;
@@ -646,7 +646,7 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
     H5Pclose(faplid);
     timings->file_close = MPI_Wtime() - start;
 
-    report_timings(timings, rank);
+    report_timings(timings, rank, "HDF5 write");
 
     free(timings);
     return 0;
