@@ -530,7 +530,7 @@ int finalize_requests(hsize_t *req_offset, hsize_t *req_length) {
     return 0;
 }
 
-int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, int req_type) {
+int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, int req_type, const char *outfname) {
     int i;
     char **buf;
     hsize_t *dims;
@@ -591,17 +591,14 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     return 0;
 }
 
-int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, int req_type) {
+int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, int req_type, const char *outfname) {
     int i;
     char **buf;
     hsize_t *dims;
     hid_t faplid, fid, *dids;
     double start;
     hsize_t *req_offset, *req_length;
-    char outfname[128];
     hdf5_noncontig_timing *timings;
-
-    sprintf(outfname, "test.h5");
 
     timings = calloc(1, sizeof(hdf5_noncontig_timing));
 
@@ -657,6 +654,8 @@ int main (int argc, char **argv) {
     size_t req_size = 0;
     int req_type = 0;
     int read_flag = 0, write_flag = 0;
+    char filename[256];
+    strcpy(filename, "test.h5");
 
     init_genrand(5555);
 
@@ -673,7 +672,11 @@ int main (int argc, char **argv) {
     MPI_Comm_rank (MPI_COMM_WORLD, &rank);
     MPI_Comm_size (MPI_COMM_WORLD, &nprocs);
 
-    while ((i = getopt (argc, argv, "WRt:d:s:n:c:")) != EOF) switch (i) {
+    while ((i = getopt (argc, argv, "WRt:d:s:n:c:a:")) != EOF) switch (i) {
+        case 'a': {
+            strcpy(filename, optarg);
+            break;
+        }
         case 'c': {
             req_count = atoi(optarg);
             break;
@@ -715,10 +718,10 @@ int main (int argc, char **argv) {
         one[i]  = 1;
     }
     if (write_flag) {
-        process_write(rank, nprocs, n_datasets, ndim, req_count, req_size, req_type);
+        process_write(rank, nprocs, n_datasets, ndim, req_count, req_size, req_type, filename);
     }
     if (read_flag) {
-        process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_type);
+        process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_type, filename);
     }
     MPI_Finalize ();
     return 0;
