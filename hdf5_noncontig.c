@@ -531,6 +531,7 @@ int finalize_requests(hsize_t *req_offset, hsize_t *req_length) {
 }
 
 int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, int req_type) {
+    int i;
     char **buf;
     hsize_t *dims;
     hid_t faplid, fid, *dids;
@@ -547,13 +548,13 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     faplid = H5Pcreate (H5P_FILE_ACCESS);
     H5Pset_fapl_mpio (faplid, MPI_COMM_WORLD, MPI_INFO_NULL);
 
-    fid = H5Fopen (outfname, H5F_ACC_RDONLY, H5P_DEFAULT, faplid);
+    fid = H5Fopen (outfname, H5F_ACC_RDONLY, faplid);
     timings->file_create = MPI_Wtime() - start;
 
     dims = (hsize_t*) malloc(sizeof(hsize_t) * ndim);
     set_dataset_dimensions(rank, nprocs, ndim, dims, req_count, req_size);
     start = MPI_Wtime();
-    open_datasets(fid, &dids, n_datasets, ndim, dims);
+    open_datasets(fid, &dids, n_datasets);
     timings->dataset_create = MPI_Wtime() - start;
 
     fill_data_buffer(&buf, n_datasets, rank, req_count * req_size, 0);
@@ -591,6 +592,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
 }
 
 int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, int req_type) {
+    int i;
     char **buf;
     hsize_t *dims;
     hid_t faplid, fid, *dids;
