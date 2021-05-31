@@ -537,7 +537,6 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     hid_t faplid, fid, *dids;
     double start;
     hsize_t *req_offset, *req_length;
-    char outfname[128];
     hdf5_noncontig_timing *timings;
 
     sprintf(outfname, "test.h5");
