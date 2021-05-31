@@ -27,7 +27,7 @@ typedef struct hdf5_noncontig_timing {
     double file_create;
     double dataset_create;
     double dataset_hyperslab;
-    double dataset_write;
+    double dataset_io;
     double dataset_close;
     double file_close;
 } hdf5_noncontig_timing;
@@ -244,6 +244,40 @@ int print_no_collective_cause(uint32_t local_no_collective_cause,uint32_t global
     return 0;
 }
 
+static int pull_multidatasets() {
+    int i;
+    uint32_t local_no_collective_cause, global_no_collective_cause;
+    int rank;
+    hid_t dxplid_coll = H5Pcreate (H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio (dxplid_coll, H5FD_MPIO_COLLECTIVE);
+
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);
+
+    //printf("Rank %d number of datasets to be written %d\n", rank, dataset_size);
+#if ENABLE_MULTIDATASET==1
+    H5Dread_multi(dxplid_coll, dataset_size, multi_datasets);
+#else
+
+    //printf("rank %d has dataset_size %lld\n", rank, (long long int) dataset_size);
+    for ( i = 0; i < dataset_size; ++i ) {
+        //MPI_Barrier(MPI_COMM_WORLD);
+        H5Dread (multi_datasets[i].dset_id, multi_datasets[i].mem_type_id, multi_datasets[i].mem_space_id, multi_datasets[i].dset_space_id, dxplid_coll, multi_datasets[i].u.rbuf);
+        if (!rank) {
+            H5Pget_mpio_no_collective_cause( dxplid_coll, &local_no_collective_cause, &global_no_collective_cause);
+            print_no_collective_cause(local_no_collective_cause, global_no_collective_cause);
+        }
+
+    }
+#endif
+
+    if (dataset_size) {
+        free(multi_datasets);
+    }
+    dataset_size = 0;
+    dataset_size_limit = 0;
+    return 0;
+}
+
 static int flush_multidatasets() {
     int i;
     uint32_t local_no_collective_cause, global_no_collective_cause;
@@ -279,15 +313,17 @@ static int flush_multidatasets() {
     return 0;
 }
 
-int fill_data_buffer(char*** buf, int n_datasets, int rank, hsize_t total_data_size) {
+int fill_data_buffer(char*** buf, int n_datasets, int rank, hsize_t total_data_size, int data_init_flag) {
     int i;
     hsize_t j;
 
     buf[0] = (char**) malloc(sizeof(char*) * n_datasets);
     for ( i = 0; i < n_datasets; ++i ) {
         buf[0][i] = (char*) malloc(sizeof(char) * total_data_size);
-        for ( j = 0; j < total_data_size; ++j ) {
-            buf[0][i][j] = rank + i * 13 + j;
+        if (data_init_flag) {
+            for ( j = 0; j < total_data_size; ++j ) {
+                buf[0][i][j] = rank + i * 13 + j;
+            }
         }
     }
     return 0;
@@ -321,6 +357,18 @@ int create_datasets(hid_t fid, hid_t **dids, int n_datasets, int ndim, hsize_t *
     }
     H5Pclose(dcplid);
     H5Sclose(sid);
+    return 0;
+}
+
+int open_datasets(hid_t fid, hid_t **dids, int n_datasets) {
+    int i;
+    char name[128];
+
+    dids[0] = (hid_t*) malloc(sizeof(hid_t) * n_datasets);
+    for ( i = 0; i < n_datasets; ++i ) {
+        sprintf(name, "dataset_%d", i);
+        dids[0][i] = H5Dopen2 (fid, name, H5P_DEFAULT);
+    }
     return 0;
 }
 
@@ -392,7 +440,7 @@ int report_timings(hdf5_noncontig_timing *timings, int rank) {
         printf("file create   : %lf (%lf) seconds\n", timings->file_create, max_times.file_create);
         printf("dataset create: %lf (%lf) seconds\n", timings->dataset_create, max_times.dataset_create);
         printf("dataset hyperslab: %lf (%lf) seconds\n", timings->dataset_hyperslab, max_times.dataset_hyperslab);
-        printf("dataset write : %lf (%lf) seconds\n", timings->dataset_write, max_times.dataset_write);
+        printf("dataset write : %lf (%lf) seconds\n", timings->dataset_io, max_times.dataset_io);
         printf("dataset close : %lf (%lf) seconds\n", timings->dataset_close, max_times.dataset_close);
         printf("file close    : %lf (%lf) seconds\n", timings->file_close, max_times.file_close);
     }
@@ -482,21 +530,133 @@ int finalize_requests(hsize_t *req_offset, hsize_t *req_length) {
     return 0;
 }
 
+int process_read(int rank, int nprocs, int n_datasets, int ndim int req_count, size_t req_size, int req_type) {
+    char **buf;
+    hsize_t *dims;
+    hid_t faplid, fid, *dids;
+    double start;
+    hsize_t *req_offset, *req_length;
+    char outfname[128];
+    hdf5_noncontig_timing *timings;
+
+    sprintf(outfname, "test.h5");
+
+    timings = calloc(1, sizeof(hdf5_noncontig_timing));
+
+    start = MPI_Wtime();
+    faplid = H5Pcreate (H5P_FILE_ACCESS);
+    H5Pset_fapl_mpio (faplid, MPI_COMM_WORLD, MPI_INFO_NULL);
+
+    fid = H5Fopen (outfname, H5F_ACC_RDONLY, H5P_DEFAULT, faplid);
+    timings->file_create = MPI_Wtime() - start;
+
+    dims = (hsize_t*) malloc(sizeof(hsize_t) * ndim);
+    set_dataset_dimensions(rank, nprocs, ndim, dims, req_count, req_size);
+    start = MPI_Wtime();
+    open_datasets(fid, &dids, n_datasets, ndim, dims);
+    timings->dataset_create = MPI_Wtime() - start;
+
+    fill_data_buffer(&buf, n_datasets, rank, req_count * req_size, 0);
+    initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
+
+    start = MPI_Wtime();
+    for ( i = 0; i < n_datasets; ++i ) {
+        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
+    }
+    timings->dataset_hyperslab = MPI_Wtime() - start;
+
+    start = MPI_Wtime();
+    pull_multidatasets();
+    timings->dataset_io = MPI_Wtime() - start;
+
+    free_data_buffer(buf, n_datasets);
+    recycle_all();
+    free(dims);
+
+    finalize_requests(req_offset, req_length);
+
+    start = MPI_Wtime();
+    close_datasets(dids, n_datasets);
+    timings->dataset_close = MPI_Wtime() - start;
+
+    start = MPI_Wtime();
+    H5Fclose(fid);
+    H5Pclose(faplid);
+    timings->file_close = MPI_Wtime() - start;
+
+    report_timings(timings, rank);
+
+    free(timings);
+    return 0;
+}
+
+int process_write(int rank, int nprocs, int n_datasets, int ndim int req_count, size_t req_size, int req_type) {
+    char **buf;
+    hsize_t *dims;
+    hid_t faplid, fid, *dids;
+    double start;
+    hsize_t *req_offset, *req_length;
+    char outfname[128];
+    hdf5_noncontig_timing *timings;
+
+    sprintf(outfname, "test.h5");
+
+    timings = calloc(1, sizeof(hdf5_noncontig_timing));
+
+    start = MPI_Wtime();
+    faplid = H5Pcreate (H5P_FILE_ACCESS);
+    H5Pset_fapl_mpio (faplid, MPI_COMM_WORLD, MPI_INFO_NULL);
+
+    fid = H5Fcreate (outfname, H5F_ACC_TRUNC, H5P_DEFAULT, faplid);
+    timings->file_create = MPI_Wtime() - start;
+
+    dims = (hsize_t*) malloc(sizeof(hsize_t) * ndim);
+    set_dataset_dimensions(rank, nprocs, ndim, dims, req_count, req_size);
+    start = MPI_Wtime();
+    create_datasets(fid, &dids, n_datasets, ndim, dims);
+    timings->dataset_create = MPI_Wtime() - start;
+
+    fill_data_buffer(&buf, n_datasets, rank, req_count * req_size, 1);
+    initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
+
+    start = MPI_Wtime();
+    for ( i = 0; i < n_datasets; ++i ) {
+        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
+    }
+    timings->dataset_hyperslab = MPI_Wtime() - start;
+
+    start = MPI_Wtime();
+    flush_multidatasets();
+    timings->dataset_io = MPI_Wtime() - start;
+
+    free_data_buffer(buf, n_datasets);
+    recycle_all();
+    free(dims);
+
+    finalize_requests(req_offset, req_length);
+
+    start = MPI_Wtime();
+    close_datasets(dids, n_datasets);
+    timings->dataset_close = MPI_Wtime() - start;
+
+    start = MPI_Wtime();
+    H5Fclose(fid);
+    H5Pclose(faplid);
+    timings->file_close = MPI_Wtime() - start;
+
+    report_timings(timings, rank);
+
+    free(timings);
+    return 0;
+}
+
 int main (int argc, char **argv) {
     int i, ndim = 1, n_datasets = 1, req_count = 0, rank, nprocs;
     size_t req_size = 0;
-    hsize_t *dims;
-    hid_t faplid, fid, *dids;
-    char **buf;
-    char outfname[128];
-    hdf5_noncontig_timing *timings;
-    double start;
-    hsize_t *req_offset, *req_length;
     int req_type = 0;
+    int read_flag, write_flag;
 
     init_genrand(5555);
-
-    sprintf(outfname, "test.h5");
 
     memspace_recycle_size = 0;
     memspace_recycle_size_limit = 0;
@@ -511,7 +671,7 @@ int main (int argc, char **argv) {
     MPI_Comm_rank (MPI_COMM_WORLD, &rank);
     MPI_Comm_size (MPI_COMM_WORLD, &nprocs);
 
-    while ((i = getopt (argc, argv, "t:d:s:n:c:")) != EOF) switch (i) {
+    while ((i = getopt (argc, argv, "WRt:d:s:n:c:")) != EOF) switch (i) {
         case 'c': {
             req_count = atoi(optarg);
             break;
@@ -532,6 +692,14 @@ int main (int argc, char **argv) {
             req_type = atoi(optarg);
             break;
         }
+        case 'R': {
+            read_flag = 1;
+            break;
+        }
+        case 'W': {
+            write_flag = 1;
+            break;
+        }
         default: {
             if (rank == 0) printf("arguments are insufficient\n");
             MPI_Finalize ();
@@ -544,50 +712,12 @@ int main (int argc, char **argv) {
     for (i = 0; i < H5S_MAX_RANK; i++) {
         one[i]  = 1;
     }
-    timings = calloc(1, sizeof(hdf5_noncontig_timing));
-
-    start = MPI_Wtime();
-    faplid = H5Pcreate (H5P_FILE_ACCESS);
-    H5Pset_fapl_mpio (faplid, MPI_COMM_WORLD, MPI_INFO_NULL);
-
-    fid = H5Fcreate (outfname, H5F_ACC_TRUNC, H5P_DEFAULT, faplid);
-    timings->file_create = MPI_Wtime() - start;
-
-    dims = (hsize_t*) malloc(sizeof(hsize_t) * ndim);
-    set_dataset_dimensions(rank, nprocs, ndim, dims, req_count, req_size);
-    start = MPI_Wtime();
-    create_datasets(fid, &dids, n_datasets, ndim, dims);
-    timings->dataset_create = MPI_Wtime() - start;
-
-    fill_data_buffer(&buf, n_datasets, rank, req_count * req_size);
-    initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
-
-    start = MPI_Wtime();
-    for ( i = 0; i < n_datasets; ++i ) {
-        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
+    if (write_flag) {
+        process_write(rank, nprocs, n_datasets, ndim req_count, req_size, req_type);
     }
-    timings->dataset_hyperslab = MPI_Wtime() - start;
-
-    start = MPI_Wtime();
-    flush_multidatasets();
-    timings->dataset_write = MPI_Wtime() - start;
-    recycle_all();
-    free(dims);
-
-    finalize_requests(req_offset, req_length);
-
-    start = MPI_Wtime();
-    close_datasets(dids, n_datasets);
-    timings->dataset_close = MPI_Wtime() - start;
-
-    start = MPI_Wtime();
-    H5Fclose(fid);
-    H5Pclose(faplid);
-    timings->file_close = MPI_Wtime() - start;
-
-    report_timings(timings, rank);
-
-    free(timings);
+    if (read_flag) {
+        process_read(rank, nprocs, n_datasets, ndim req_count, req_size, req_type);
+    }
     MPI_Finalize ();
     return 0;
 }
