@@ -656,7 +656,7 @@ int main (int argc, char **argv) {
     int i, ndim = 1, n_datasets = 1, req_count = 0, rank, nprocs;
     size_t req_size = 0;
     int req_type = 0;
-    int read_flag, write_flag;
+    int read_flag = 0, write_flag = 0;
 
     init_genrand(5555);
 
