@@ -539,8 +539,6 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     hsize_t *req_offset, *req_length;
     hdf5_noncontig_timing *timings;
 
-    sprintf(outfname, "test.h5");
-
     timings = calloc(1, sizeof(hdf5_noncontig_timing));
 
     start = MPI_Wtime();
