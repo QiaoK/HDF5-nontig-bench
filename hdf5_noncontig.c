@@ -261,8 +261,8 @@ static int pull_multidatasets() {
     //printf("rank %d has dataset_size %lld\n", rank, (long long int) dataset_size);
     for ( i = 0; i < dataset_size; ++i ) {
         //MPI_Barrier(MPI_COMM_WORLD);
-    printf("checkpoint rank %d\n",rank);
         H5Dread (multi_datasets[i].dset_id, multi_datasets[i].mem_type_id, multi_datasets[i].mem_space_id, multi_datasets[i].dset_space_id, dxplid_coll, multi_datasets[i].u.rbuf);
+    printf("checkpoint rank %d\n",rank);
         if (!rank) {
             H5Pget_mpio_no_collective_cause( dxplid_coll, &local_no_collective_cause, &global_no_collective_cause);
             print_no_collective_cause(local_no_collective_cause, global_no_collective_cause);
