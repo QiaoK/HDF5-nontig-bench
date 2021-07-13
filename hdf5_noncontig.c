@@ -559,7 +559,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
 
     fill_data_buffer(&buf, n_datasets, rank, req_count * req_size, 0);
     initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
-
+    printf("checkpoint rank %d\n",rank);
     start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
         aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
@@ -643,7 +643,6 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
     H5Pclose(faplid);
     timings->file_close = MPI_Wtime() - start;
 
-    printf("checkpoint rank %d\n",rank);
     report_timings(timings, rank, "HDF5 write");
 
     free(timings);
