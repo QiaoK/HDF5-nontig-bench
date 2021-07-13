@@ -385,6 +385,7 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
     hsize_t total_memspace_size = 0;
+    req_count *= req_count;
 
     dsid = H5Dget_space (did);
     register_dataspace_recycle(dsid);
@@ -400,9 +401,9 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
             }
         }
     } else if (ndim == 2) {
-        for ( i = 0; i < req_count * req_count; ++i ) {
-            start[0] = req_offset[i] / dims[1];
-            start[1] = req_offset[i] % dims[1];
+        for ( i = 0; i < req_count; ++i ) {
+            start[0] = (req_offset[i] / dims[1]) * req_size;
+            start[1] = (req_offset[i] % dims[1]);
             block[0] = req_length[i];
             block[1] = req_length[i];
             total_memspace_size += block[0] * block[1];
@@ -457,9 +458,9 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
             printf("ndim = %d, dims[0] = %llu\n", ndim, dims[0]);
         }
     } else if (ndim == 2) {
-        req_count_per_dim = ((int) ceil(sqrt(nprocs))) * req_count * req_count;
-        dims[0] = req_count_per_dim * req_size;
-        dims[1] = req_count_per_dim * req_size;
+        req_count_per_dim = ((int) ceil(sqrt(nprocs))) * req_count * req_size;
+        dims[0] = req_count_per_dim;
+        dims[1] = req_count_per_dim;
         if ( rank == 0 ) {
             printf("ndim = %d, dims[0] = %llu, dims[1] = %llu\n", ndim, dims[0], dims[1]);
         }
