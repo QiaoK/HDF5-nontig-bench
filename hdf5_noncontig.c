@@ -262,7 +262,6 @@ static int pull_multidatasets() {
     for ( i = 0; i < dataset_size; ++i ) {
         //MPI_Barrier(MPI_COMM_WORLD);
         H5Dread (multi_datasets[i].dset_id, multi_datasets[i].mem_type_id, multi_datasets[i].mem_space_id, multi_datasets[i].dset_space_id, dxplid_coll, multi_datasets[i].u.rbuf);
-    printf("checkpoint rank %d\n",rank);
         if (!rank) {
             H5Pget_mpio_no_collective_cause( dxplid_coll, &local_no_collective_cause, &global_no_collective_cause);
             print_no_collective_cause(local_no_collective_cause, global_no_collective_cause);
@@ -386,7 +385,6 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
     hsize_t total_memspace_size = 0;
-    req_count *= req_count;
 
     dsid = H5Dget_space (did);
     register_dataspace_recycle(dsid);
@@ -459,7 +457,7 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
             printf("ndim = %d, dims[0] = %llu\n", ndim, dims[0]);
         }
     } else if (ndim == 2) {
-        req_count_per_dim = ((int) ceil(sqrt(nprocs))) * req_count * req_size;
+        req_count_per_dim = ((int) ceil(sqrt(nprocs * req_count))) * req_size;
         dims[0] = req_count_per_dim;
         dims[1] = req_count_per_dim;
         if ( rank == 0 ) {
@@ -495,7 +493,6 @@ void shuffle(hsize_t *array, hsize_t n)
 int initialize_requests(int rank, int nprocs, int type, int req_count, int req_size, hsize_t **req_offset, hsize_t **req_length) {
     int i;
     hsize_t *random_array = NULL;
-    req_count *= req_count;
     switch (type) {
         case 0: {
             *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
@@ -715,6 +712,11 @@ int main (int argc, char **argv) {
     }
     for (i = 0; i < H5S_MAX_RANK; i++) {
         one[i]  = 1;
+    }
+    if (ndim == 2) {
+        req_count *= req_count;
+    } else if (ndim ==3) {
+        req_count = req_count * req_count * req_count;
     }
     initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
     if (write_flag) {
