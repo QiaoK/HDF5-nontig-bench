@@ -384,7 +384,7 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     int i;
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
-    hsize_t total_memspace_size = req_size * req_count;
+    hsize_t total_memspace_size = req_size * req_count * req_count;
 
     dsid = H5Dget_space (did);
     register_dataspace_recycle(dsid);
