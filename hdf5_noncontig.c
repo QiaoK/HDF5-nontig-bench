@@ -400,10 +400,10 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
             }
         }
     } else if (ndim == 2) {
-        for ( i = 0; i < req_count; ++i ) {
+        for ( i = 0; i < req_count * req_count; ++i ) {
             start[0] = req_offset[i] / dims[1];
             start[1] = req_offset[i] % dims[1];
-            block[0] = 1;
+            block[0] = req_length[i];
             block[1] = req_length[i];
             if ( i ) {
                 H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
@@ -456,9 +456,9 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
             printf("ndim = %d, dims[0] = %llu\n", ndim, dims[0]);
         }
     } else if (ndim == 2) {
-        req_count_per_dim = (int) ceil(sqrt(req_count * nprocs));
-        dims[0] = nprocs * req_count / req_count_per_dim;
-        dims[1] = req_count_per_dim * req_size;
+        req_count_per_dim = ((int) ceil(sqrt(nprocs))) * req_count;
+        dims[0] = req_count * req_size;
+        dims[1] = req_count * req_size;
         if ( rank == 0 ) {
             printf("ndim = %d, dims[0] = %llu, dims[1] = %llu\n", ndim, dims[0], dims[1]);
         }
@@ -492,6 +492,7 @@ void shuffle(hsize_t *array, hsize_t n)
 int initialize_requests(int rank, int nprocs, int type, int req_count, int req_size, hsize_t **req_offset, hsize_t **req_length) {
     int i;
     hsize_t *random_array = NULL;
+    req_count *= req_count;
     switch (type) {
         case 0: {
             *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
