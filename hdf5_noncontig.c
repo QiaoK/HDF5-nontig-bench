@@ -643,6 +643,7 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
     H5Pclose(faplid);
     timings->file_close = MPI_Wtime() - start;
 
+    printf("checkpoint rank %d\n",rank);
     report_timings(timings, rank, "HDF5 write");
 
     free(timings);
