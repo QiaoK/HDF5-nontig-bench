@@ -571,8 +571,6 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     recycle_all();
     free(dims);
 
-    finalize_requests(req_offset, req_length);
-
     start = MPI_Wtime();
     close_datasets(dids, n_datasets);
     timings->dataset_close = MPI_Wtime() - start;
@@ -626,8 +624,6 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
     free_data_buffer(buf, n_datasets);
     recycle_all();
     free(dims);
-
-    finalize_requests(req_offset, req_length);
 
     start = MPI_Wtime();
     close_datasets(dids, n_datasets);
@@ -726,6 +722,7 @@ int main (int argc, char **argv) {
     if (read_flag) {
         process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, req_length, req_type, filename);
     }
+    finalize_requests(req_offset, req_length);
     MPI_Finalize ();
     return 0;
 }
