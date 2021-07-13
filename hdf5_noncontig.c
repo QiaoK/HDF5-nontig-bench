@@ -565,10 +565,10 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     }
     timings->dataset_hyperslab = MPI_Wtime() - start;
 
-    printf("checkpoint rank %d\n",rank);
     start = MPI_Wtime();
     pull_multidatasets();
     timings->dataset_io = MPI_Wtime() - start;
+    printf("checkpoint rank %d\n",rank);
 
     free_data_buffer(buf, n_datasets);
     recycle_all();
