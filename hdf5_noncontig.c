@@ -3,6 +3,7 @@
 #include <string.h> /* strcpy(), strncpy() */
 #include <unistd.h> /* getopt() */
 #include <math.h>
+#include <stdint.h>
 #include "hdf5.h"
 #include "random.h"
 
@@ -436,11 +437,19 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     return 0;
 }
 
-int report_timings(hdf5_noncontig_timing *timings, int rank, const char *prefix) {
+int report_timings(hdf5_noncontig_timing *timings, int rank, const char *prefix, int nprocs, int n_datasets, hsize_t *dims, int ndim) {
     hdf5_noncontig_timing max_times;
+    uint64_t total_data_size, local_data_size;
+    local_data_size = dims[0] * n_datasets;
+    for ( i = 1; i < ndim; ++i ) {
+        local_data_size *= dims[i];
+    }
+
     MPI_Reduce(timings, &max_times, sizeof(hdf5_noncontig_timing) / sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_data_size, &total_data_size, 1, MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
+        printf("Total dataset written by %d processes is %llu MB\n", nprocs, (long long unsigned) (total_data_size / 1048576));
         printf("%s file create   : %lf (%lf) seconds\n", prefix, timings->file_create, max_times.file_create);
         printf("%s dataset create: %lf (%lf) seconds\n", prefix, timings->dataset_create, max_times.dataset_create);
         printf("%s dataset hyperslab: %lf (%lf) seconds\n", prefix, timings->dataset_hyperslab, max_times.dataset_hyperslab);
@@ -587,7 +596,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     H5Pclose(faplid);
     timings->file_close = MPI_Wtime() - start;
 
-    report_timings(timings, rank, "HDF5 read");
+    report_timings(timings, rank, "HDF5 read", nprocs, n_datasets, dims, ndim);
 
     free(timings);
     return 0;
@@ -646,7 +655,7 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
     H5Pclose(faplid);
     timings->file_close = MPI_Wtime() - start;
 
-    report_timings(timings, rank, "HDF5 write");
+    report_timings(timings, rank, "HDF5 write", nprocs, n_datasets, dims, ndim);
 
     free(timings);
     return 0;
