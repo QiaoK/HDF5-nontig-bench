@@ -438,6 +438,7 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
 }
 
 int report_timings(hdf5_noncontig_timing *timings, int rank, const char *prefix, int nprocs, int n_datasets, hsize_t *dims, int ndim) {
+    int i;
     hdf5_noncontig_timing max_times;
     uint64_t total_data_size, local_data_size;
     local_data_size = dims[0] * n_datasets;
@@ -543,7 +544,7 @@ int finalize_requests(hsize_t *req_offset, hsize_t *req_length) {
     return 0;
 }
 
-int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t *req_offset, hsize_t *req_length, int req_type, const char *outfname) {
+int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t *req_offset, hsize_t *req_length, const char *outfname) {
     int i;
     char **buf;
     hsize_t *dims;
@@ -602,7 +603,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     return 0;
 }
 
-int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t *req_offset, hsize_t *req_length, int req_type, const char *outfname) {
+int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t *req_offset, hsize_t *req_length, const char *outfname) {
     int i;
     char **buf;
     hsize_t *dims;
@@ -738,10 +739,10 @@ int main (int argc, char **argv) {
     }
     initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
     if (write_flag) {
-        process_write(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, req_length, req_type, filename);
+        process_write(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, req_length, filename);
     }
     if (read_flag) {
-        process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, req_length, req_type, filename);
+        process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, req_length, filename);
     }
     finalize_requests(req_offset, req_length);
     MPI_Finalize ();
