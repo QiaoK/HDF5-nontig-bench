@@ -522,7 +522,7 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
             if (rank ==0) {
                 random_array = (hsize_t*) malloc(sizeof(hsize_t) * nprocs * req_count);
                 for ( i = 0; i < nprocs * req_count; ++i ) {
-                    random_array[i] = i * req_size;
+                    random_array[i] = i;
                 }
                 shuffle(random_array, nprocs * req_count);
                 MPI_Scatter(random_array, req_count * sizeof(hsize_t), MPI_BYTE, req_offset[0], req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
