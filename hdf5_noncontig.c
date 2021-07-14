@@ -628,7 +628,7 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
         aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
     }
     timings->dataset_hyperslab = MPI_Wtime() - start;
-
+    printf("checkpoint %d\n", rank);
     start = MPI_Wtime();
     flush_multidatasets();
     timings->dataset_io = MPI_Wtime() - start;
