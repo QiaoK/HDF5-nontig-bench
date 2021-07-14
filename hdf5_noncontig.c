@@ -438,7 +438,6 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
 }
 
 int report_timings(hdf5_noncontig_timing *timings, int rank, const char *prefix, int nprocs, uint64_t local_data_size) {
-    int i;
     hdf5_noncontig_timing max_times;
     uint64_t total_data_size;
 
