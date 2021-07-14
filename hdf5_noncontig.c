@@ -415,11 +415,11 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
         }
     } else if (ndim == 3) {
         for ( i = 0; i < req_count; ++i ) {
-            start[0] = req_offset[i] / (dims[1] * dims[2]);
-            start[1] = ( req_offset[i] % (dims[2] * dims[1]) ) / dims[2];
+            start[0] = req_offset[i] / (dims[1] * dims[2]) * req_size * req_size;
+            start[1] = ( req_offset[i] % (dims[2] * dims[1]) ) / dims[2] * req_size;
             start[2] = req_offset[i] % dims[2];
-            block[0] = 1;
-            block[1] = 1;
+            block[0] = req_length[i];
+            block[1] = req_length[i];
             block[2] = req_length[i];
             if ( i ) {
                 H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
@@ -465,10 +465,10 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
             printf("ndim = %d, dims[0] = %llu, dims[1] = %llu\n", ndim, dims[0], dims[1]);
         }
     } else if (ndim ==3) {
-        req_count_per_dim = (int) ceil(cbrt(req_count * nprocs));
-        dims[0] = (nprocs * req_count + req_count_per_dim * req_count_per_dim - 1) / (req_count_per_dim * req_count_per_dim);
+        req_count_per_dim = (int) ceil(cbrt(req_count * nprocs)) * req_size;
+        dims[0] = req_count_per_dim;
         dims[1] = req_count_per_dim;
-        dims[2] = req_count_per_dim * req_size;
+        dims[2] = req_count_per_dim;
         if ( rank == 0 ) {
             printf("ndim = %d, dims[0] = %llu, dims[1] = %llu, dims[2] = %llu\n", ndim, dims[0], dims[1], dims[2]);
         }
