@@ -437,14 +437,10 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     return 0;
 }
 
-int report_timings(hdf5_noncontig_timing *timings, int rank, const char *prefix, int nprocs, int n_datasets, hsize_t *dims, int ndim) {
+int report_timings(hdf5_noncontig_timing *timings, int rank, const char *prefix, int nprocs, uint64_t local_data_size) {
     int i;
     hdf5_noncontig_timing max_times;
-    uint64_t total_data_size, local_data_size;
-    local_data_size = dims[0] * n_datasets;
-    for ( i = 1; i < ndim; ++i ) {
-        local_data_size *= dims[i];
-    }
+    uint64_t total_data_size;
 
     MPI_Reduce(timings, &max_times, sizeof(hdf5_noncontig_timing) / sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&local_data_size, &total_data_size, 1, MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -596,7 +592,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     H5Pclose(faplid);
     timings->file_close = MPI_Wtime() - start;
 
-    report_timings(timings, rank, "HDF5 read", nprocs, n_datasets, dims, ndim);
+    report_timings(timings, rank, "HDF5 read", nprocs, n_datasets * total_data_size);
 
     free(dims);
     free(timings);
@@ -655,7 +651,7 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
     H5Pclose(faplid);
     timings->file_close = MPI_Wtime() - start;
 
-    report_timings(timings, rank, "HDF5 write", nprocs, n_datasets, dims, ndim);
+    report_timings(timings, rank, "HDF5 write", nprocs, n_datasets * total_data_size);
 
     free(dims);
     free(timings);
