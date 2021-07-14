@@ -539,6 +539,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     hid_t faplid, fid, *dids;
     double start;
     hdf5_noncontig_timing *timings;
+    hsize_t total_data_size;
 
     timings = calloc(1, sizeof(hdf5_noncontig_timing));
 
@@ -555,7 +556,11 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     open_datasets(fid, &dids, n_datasets);
     timings->dataset_create = MPI_Wtime() - start;
 
-    fill_data_buffer(&buf, n_datasets, rank, req_count * req_size, 0);
+    total_data_size = req_count * req_size;
+    for ( i = 1; i < ndim; ++i ) {
+        total_data_size *= req_size;
+    }
+    fill_data_buffer(&buf, n_datasets, rank, total_data_size, 0);
     initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
     start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
@@ -593,6 +598,7 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
     hid_t faplid, fid, *dids;
     double start;
     hdf5_noncontig_timing *timings;
+    hsize_t total_data_size;
 
     timings = calloc(1, sizeof(hdf5_noncontig_timing));
 
@@ -609,6 +615,10 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
     create_datasets(fid, &dids, n_datasets, ndim, dims);
     timings->dataset_create = MPI_Wtime() - start;
 
+    total_data_size = req_count * req_size;
+    for ( i = 1; i < ndim; ++i ) {
+        total_data_size *= req_size;
+    }
     fill_data_buffer(&buf, n_datasets, rank, req_count * req_size, 1);
 
     start = MPI_Wtime();
