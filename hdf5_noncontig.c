@@ -402,8 +402,8 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
         }
     } else if (ndim == 2) {
         for ( i = 0; i < req_count; ++i ) {
-            start[0] = (req_offset[i] / dims[1]) * req_size;
-            start[1] = (req_offset[i] % dims[1]);
+            start[0] = (req_offset[i] / (dims[1]/req_size) ) * req_size;
+            start[1] = (req_offset[i] % (dims[1]/req_size) ) * req_size;
             block[0] = req_length[i];
             block[1] = req_length[i];
             total_memspace_size += block[0] * block[1];
@@ -415,9 +415,9 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
         }
     } else if (ndim == 3) {
         for ( i = 0; i < req_count; ++i ) {
-            start[0] = (req_offset[i] / (dims[1] * dims[2])) * req_size;
-            start[1] = (( req_offset[i] % (dims[2] * dims[1]) ) / dims[2]) * req_size;
-            start[2] = req_offset[i] % dims[2];
+            start[0] = (req_offset[i] / ( (dims[1]/req_size) * (dims[2]/req_size) )) * req_size;
+            start[1] = (( req_offset[i] % ( (dims[2]/req_size) * (dims[1]/req_size) )) / (dims[2]/req_size) ) * req_size;
+            start[2] = (req_offset[i] % (dims[2]/req_size)) * req_size;
             block[0] = req_length[i];
             block[1] = req_length[i];
             block[2] = req_length[i];
@@ -501,7 +501,7 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
             *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
             *req_length = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
             for ( i = 0; i < req_count; ++i ) {
-                req_offset[0][i] = (i * nprocs + rank) * req_size;
+                req_offset[0][i] = (i * nprocs + rank);
                 req_length[0][i] = req_size;
             }
             break;
