@@ -621,14 +621,14 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
     for ( i = 1; i < ndim; ++i ) {
         total_data_size *= req_size;
     }
-    fill_data_buffer(&buf, n_datasets, rank, req_count * req_size, 1);
+    fill_data_buffer(&buf, n_datasets, rank, total_data_size, 1);
 
     start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
         aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
     }
     timings->dataset_hyperslab = MPI_Wtime() - start;
-    printf("checkpoint %d\n", rank);
+    //printf("checkpoint %d\n", rank);
     start = MPI_Wtime();
     flush_multidatasets();
     timings->dataset_io = MPI_Wtime() - start;
