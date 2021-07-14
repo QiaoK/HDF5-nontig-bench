@@ -586,7 +586,6 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
 
     free_data_buffer(buf, n_datasets);
     recycle_all();
-    free(dims);
 
     start = MPI_Wtime();
     close_datasets(dids, n_datasets);
@@ -599,6 +598,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
 
     report_timings(timings, rank, "HDF5 read", nprocs, n_datasets, dims, ndim);
 
+    free(dims);
     free(timings);
     return 0;
 }
@@ -645,7 +645,6 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
 
     free_data_buffer(buf, n_datasets);
     recycle_all();
-    free(dims);
 
     start = MPI_Wtime();
     close_datasets(dids, n_datasets);
@@ -658,6 +657,7 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
 
     report_timings(timings, rank, "HDF5 write", nprocs, n_datasets, dims, ndim);
 
+    free(dims);
     free(timings);
     return 0;
 }
