@@ -421,6 +421,7 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
             block[0] = req_length[i];
             block[1] = req_length[i];
             block[2] = req_length[i];
+           total_memspace_size += block[0] * block[1] * block[2];
             if ( i ) {
                 H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
             } else {
