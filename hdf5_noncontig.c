@@ -563,7 +563,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
         total_data_size *= req_size;
     }
     fill_data_buffer(&buf, n_datasets, rank, total_data_size, 0);
-    initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
+
     start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
         aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
