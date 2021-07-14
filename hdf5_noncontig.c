@@ -415,7 +415,7 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
         }
     } else if (ndim == 3) {
         for ( i = 0; i < req_count; ++i ) {
-            start[0] = (req_offset[i] / (dims[1] * dims[2])) * req_size * req_size;
+            start[0] = (req_offset[i] / (dims[1] * dims[2])) * req_size;
             start[1] = (( req_offset[i] % (dims[2] * dims[1]) ) / dims[2]) * req_size;
             start[2] = req_offset[i] % dims[2];
             block[0] = req_length[i];
