@@ -450,7 +450,7 @@ int report_timings(hdf5_noncontig_timing *timings, int rank, const char *prefix,
     MPI_Reduce(&local_data_size, &total_data_size, 1, MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
-        printf("Total dataset written by %d processes is %llu MB\n", nprocs, (long long unsigned) (total_data_size / 1048576));
+        printf("Total dataset written by %d processes is %llu MB\n", nprocs, (long long unsigned) (local_data_size / 1048576));
         printf("%s file create   : %lf (%lf) seconds\n", prefix, timings->file_create, max_times.file_create);
         printf("%s dataset create: %lf (%lf) seconds\n", prefix, timings->dataset_create, max_times.dataset_create);
         printf("%s dataset hyperslab: %lf (%lf) seconds\n", prefix, timings->dataset_hyperslab, max_times.dataset_hyperslab);
