@@ -722,15 +722,10 @@ int main (int argc, char **argv) {
         }
     }
     if (rank == 0) {
-        printf("req_count = %d, req_size = %ld, ndim = %d, n_datasets = %d, req_type = %d, total data size = %ld MiB\n", req_count, req_size, ndim, n_datasets, req_type, n_datasets * req_count * req_size * nprocs / 1048576);
+        printf("req_count = %d, req_size = %ld, ndim = %d, n_datasets = %d, req_type = %d\n", req_count, req_size, ndim, n_datasets, req_type);
     }
     for (i = 0; i < H5S_MAX_RANK; i++) {
         one[i]  = 1;
-    }
-    if (ndim == 2) {
-        req_count *= req_count;
-    } else if (ndim ==3) {
-        req_count = req_count * req_count * req_count;
     }
     initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
     if (write_flag) {
