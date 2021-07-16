@@ -381,7 +381,7 @@ int close_datasets(hid_t *dids, int n_datasets) {
     return 0;
 }
 
-int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, const hsize_t *dims, const hsize_t *req_offset, const hsize_t *req_length) {
+int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int ndim, const hsize_t *dims, const hsize_t *req_offset) {
     int i;
     hid_t dsid, msid;
     hsize_t start[H5S_MAX_RANK], block[H5S_MAX_RANK];
@@ -393,7 +393,7 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
     if (ndim == 1) {
         for ( i = 0; i < req_count; ++i ) {
             start[0] = req_offset[i];
-            block[0] = req_length[i];
+            block[0] = req_size;
             total_memspace_size += block[0];
             if ( i ) {
                 H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
@@ -405,8 +405,8 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
         for ( i = 0; i < req_count; ++i ) {
             start[0] = (req_offset[i] / (dims[1]/req_size) ) * req_size;
             start[1] = (req_offset[i] % (dims[1]/req_size) ) * req_size;
-            block[0] = req_length[i];
-            block[1] = req_length[i];
+            block[0] = req_size;
+            block[1] = req_size;
             total_memspace_size += block[0] * block[1];
             if ( i ) {
                 H5Sselect_hyperslab (dsid, H5S_SELECT_OR, start, NULL, one, block);
@@ -419,9 +419,9 @@ int aggregate_datasets(hid_t did, char* buf, int req_count, int req_size, int nd
             start[0] = (req_offset[i] / ( (dims[1]/req_size) * (dims[2]/req_size) )) * req_size;
             start[1] = (( req_offset[i] % ( (dims[2]/req_size) * (dims[1]/req_size) )) / (dims[2]/req_size) ) * req_size;
             start[2] = (req_offset[i] % (dims[2]/req_size)) * req_size;
-            block[0] = req_length[i];
-            block[1] = req_length[i];
-            block[2] = req_length[i];
+            block[0] = req_size;
+            block[1] = req_size;
+            block[2] = req_size;
             //printf("start[0] = %llu, start[1] = %llu, start[2] = %llu, block[0] = %llu, block[1] = %llu, block[2] = %llu\n", start[0], start[1], start[2], block[0], block[1], block[2]);
             total_memspace_size += block[0] * block[1] * block[2];
             if ( i ) {
@@ -498,34 +498,38 @@ void shuffle(hsize_t *array, hsize_t n)
     }
 }
 
-int initialize_requests(int rank, int nprocs, int type, int req_count, int req_size, hsize_t **req_offset, hsize_t **req_length) {
-    int i;
+int initialize_requests(int rank, int nprocs, int type, int req_count, int req_size, hsize_t ***req_offset) {
+    int i, j;
     hsize_t *random_array = NULL;
+    *req_offset = (hsize_t**) malloc(sizeof(hsize_t*) * n_datasets);
+    **req_offset = (hsize_t*) malloc(sizeof(hsize_t) * n_datasets * req_count);
+    for ( i = 1; i < n_datasets; ++i ) {
+        req_offset[0][i] = req_offset[0][i-1] + req_count;
+    }
+
     switch (type) {
         case 0: {
-            *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
-            *req_length = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
-            for ( i = 0; i < req_count; ++i ) {
-                req_offset[0][i] = (i * nprocs + rank);
-                req_length[0][i] = req_size;
+            for ( j = 0; j < n_datasets; ++j ) {
+                for ( i = 0; i < req_count; ++i ) {
+                    req_offset[0][j][i] = (i * nprocs + rank);
+                }
             }
             break;
         }
         case 1: {
-            *req_offset = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
-            *req_length = (hsize_t*) malloc(sizeof(hsize_t) * req_count);
             if (rank ==0) {
-                random_array = (hsize_t*) malloc(sizeof(hsize_t) * nprocs * req_count);
-                for ( i = 0; i < nprocs * req_count; ++i ) {
-                    random_array[i] = i;
+                for ( j = 0; j < n_datasets; ++j ) {
+                    random_array = (hsize_t*) malloc(sizeof(hsize_t) * nprocs * req_count);
+                    for ( i = 0; i < nprocs * req_count; ++i ) {
+                        random_array[i] = i;
+                    }
+                    shuffle(random_array, nprocs * req_count);
+                    MPI_Scatter(random_array, req_count * sizeof(hsize_t), MPI_BYTE, req_offset[0][j], req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
                 }
-                shuffle(random_array, nprocs * req_count);
-                MPI_Scatter(random_array, req_count * sizeof(hsize_t), MPI_BYTE, req_offset[0], req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
             } else {
-                MPI_Scatter(NULL, 0, MPI_BYTE, req_offset[0], req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
-            }
-            for ( i = 0; i < req_count; ++i ) {
-                req_length[0][i] = req_size;
+                for ( j = 0; j < n_datasets; ++j ) {
+                    MPI_Scatter(NULL, 0, MPI_BYTE, req_offset[0][j], req_count * sizeof(hsize_t), MPI_BYTE, 0, MPI_COMM_WORLD);
+                }
             }
             break;
         }
@@ -533,13 +537,13 @@ int initialize_requests(int rank, int nprocs, int type, int req_count, int req_s
     return 0;
 }
 
-int finalize_requests(hsize_t *req_offset, hsize_t *req_length) {
+int finalize_requests(hsize_t **req_offset) {
+    free(req_offset[0]);
     free(req_offset);
-    free(req_length);
     return 0;
 }
 
-int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t *req_offset, hsize_t *req_length, const char *outfname) {
+int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t **req_offset, const char *outfname) {
     int i;
     char **buf;
     hsize_t *dims;
@@ -571,7 +575,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
 
     start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
-        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
+        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset[i]);
     }
     timings->dataset_hyperslab = MPI_Wtime() - start;
 
@@ -598,7 +602,7 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     return 0;
 }
 
-int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t *req_offset, hsize_t *req_length, const char *outfname) {
+int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t **req_offset, const char *outfname) {
     int i;
     char **buf;
     hsize_t *dims;
@@ -630,7 +634,7 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
 
     start = MPI_Wtime();
     for ( i = 0; i < n_datasets; ++i ) {
-        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset, req_length);
+        aggregate_datasets(dids[i], buf[i], req_count, req_size, ndim, dims, req_offset[i]);
     }
     timings->dataset_hyperslab = MPI_Wtime() - start;
     //printf("checkpoint %d\n", rank);
@@ -663,7 +667,7 @@ int main (int argc, char **argv) {
     int req_type = 0;
     int read_flag = 0, write_flag = 0;
     char filename[256];
-    hsize_t *req_offset, *req_length;
+    hsize_t **req_offset;
 
     strcpy(filename, "test.h5");
 
@@ -727,14 +731,14 @@ int main (int argc, char **argv) {
     for (i = 0; i < H5S_MAX_RANK; i++) {
         one[i]  = 1;
     }
-    initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset, &req_length);
+    initialize_requests(rank, nprocs, req_type, req_count, req_size, &req_offset);
     if (write_flag) {
-        process_write(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, req_length, filename);
+        process_write(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, filename);
     }
     if (read_flag) {
-        process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, req_length, filename);
+        process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, filename);
     }
-    finalize_requests(req_offset, req_length);
+    finalize_requests(req_offset);
     MPI_Finalize ();
     return 0;
 }
