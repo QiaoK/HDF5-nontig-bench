@@ -498,7 +498,7 @@ void shuffle(hsize_t *array, hsize_t n)
     }
 }
 
-int initialize_requests(int rank, int nprocs, int type, int req_count, int req_size, int n_datasets, hsize_t ***req_offset) {
+int initialize_requests(int rank, int nprocs, int type, int req_count, int n_datasets, hsize_t ***req_offset) {
     int i, j;
     hsize_t *random_array = NULL;
     *req_offset = (hsize_t**) malloc(sizeof(hsize_t*) * n_datasets);
@@ -731,7 +731,7 @@ int main (int argc, char **argv) {
     for (i = 0; i < H5S_MAX_RANK; i++) {
         one[i]  = 1;
     }
-    initialize_requests(rank, nprocs, req_type, req_count, req_size, n_datasets, &req_offset);
+    initialize_requests(rank, nprocs, req_type, req_count, n_datasets, &req_offset);
     if (write_flag) {
         process_write(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, filename);
     }
