@@ -669,6 +669,10 @@ int main (int argc, char **argv) {
     char filename[256];
     hsize_t **req_offset;
 
+    MPI_Init (&argc, &argv);
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);
+    MPI_Comm_size (MPI_COMM_WORLD, &nprocs);
+
     strcpy(filename, "test.h5");
 
     init_genrand(5555);
@@ -681,10 +685,6 @@ int main (int argc, char **argv) {
 
     dataset_size = 0;
     dataset_size_limit = 0;
-
-    MPI_Init (&argc, &argv);
-    MPI_Comm_rank (MPI_COMM_WORLD, &rank);
-    MPI_Comm_size (MPI_COMM_WORLD, &nprocs);
 
     while ((i = getopt (argc, argv, "WRt:d:s:n:c:a:")) != EOF) switch (i) {
         case 'a': {
