@@ -330,6 +330,16 @@ int fill_data_buffer(char*** buf, int n_datasets, int rank, hsize_t total_data_s
     return 0;
 }
 
+int compare_data_buffer(char **buf1, char **buf2, hsize_t total_data_size) {
+    hszie_t j;
+    for ( j = 0; j < total_data_size; ++j ) {
+        if (buf1[0][j] != buf2[0][j]) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 int free_data_buffer(char** buf, int n_datasets) {
     int i;
     for ( i = 0; i < n_datasets; ++i ) {
@@ -543,7 +553,7 @@ int finalize_requests(hsize_t **req_offset) {
     return 0;
 }
 
-int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t **req_offset, const char *outfname) {
+int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t **req_offset, const char *outfname, char ***buf_ptr) {
     int i;
     char **buf;
     hsize_t *dims;
@@ -599,10 +609,12 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
 
     free(dims);
     free(timings);
+
+    *buf_ptr = buf;
     return 0;
 }
 
-int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t **req_offset, const char *outfname) {
+int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count, size_t req_size, hsize_t **req_offset, const char *outfname, char ***buf_ptr, hsize_t *total_data_size_ptr) {
     int i;
     char **buf;
     hsize_t *dims;
@@ -642,7 +654,6 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
     flush_multidatasets();
     timings->dataset_io = MPI_Wtime() - start;
 
-    free_data_buffer(buf, n_datasets);
     recycle_all();
 
     start = MPI_Wtime();
@@ -658,6 +669,9 @@ int process_write(int rank, int nprocs, int n_datasets, int ndim, int req_count,
 
     free(dims);
     free(timings);
+
+    *buf_ptr = buf;
+    *total_data_size_ptr = total_data_size;
     return 0;
 }
 
@@ -667,7 +681,10 @@ int main (int argc, char **argv) {
     int req_type = 0;
     int read_flag = 0, write_flag = 0;
     char filename[256];
+    char **buf1, char **buf2;
     hsize_t **req_offset;
+    hsize_t total_data_size;
+    int compare_correctness = 0;
 
     MPI_Init (&argc, &argv);
     MPI_Comm_rank (MPI_COMM_WORLD, &rank);
@@ -686,7 +703,7 @@ int main (int argc, char **argv) {
     dataset_size = 0;
     dataset_size_limit = 0;
 
-    while ((i = getopt (argc, argv, "WRt:d:s:n:c:a:")) != EOF) switch (i) {
+    while ((i = getopt (argc, argv, "CWRt:d:s:n:c:a:")) != EOF) switch (i) {
         case 'a': {
             strcpy(filename, optarg);
             break;
@@ -719,6 +736,10 @@ int main (int argc, char **argv) {
             write_flag = 1;
             break;
         }
+        case 'W': {
+            compare_correctness = 1;
+            break;
+        }
         default: {
             if (rank == 0) printf("arguments are insufficient\n");
             MPI_Finalize ();
@@ -733,11 +754,21 @@ int main (int argc, char **argv) {
     }
     initialize_requests(rank, nprocs, req_type, req_count, n_datasets, &req_offset);
     if (write_flag) {
-        process_write(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, filename);
+        process_write(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, filename, &buf1, &total_data_size);
     }
     if (read_flag) {
-        process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, filename);
+        process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, filename, &buf2);
     }
+    if (compare_correctness && read_flag && write_flag) {
+        if (compare_data_buffer(buf1, buf2, total_data_size)) {
+            printf("Byte-wise correctness check passed\n");
+        } else {
+            printf("Byte-wise correctness check failed\n");
+        }
+    }
+
+    free_data_buffer(buf1, n_datasets);
+    free_data_buffer(buf2, n_datasets);
     finalize_requests(req_offset);
     MPI_Finalize ();
     return 0;
