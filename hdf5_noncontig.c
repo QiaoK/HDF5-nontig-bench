@@ -762,10 +762,8 @@ int main (int argc, char **argv) {
         process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, filename, &buf2);
     }
     if (compare_correctness && read_flag && write_flag) {
-        if (compare_data_buffer(buf1, buf2, n_datasets, total_data_size)) {
-            printf("Byte-wise correctness check passed\n");
-        } else {
-            printf("Byte-wise correctness check failed\n");
+        if (!compare_data_buffer(buf1, buf2, n_datasets, total_data_size)) {
+            printf("Rank %d Byte-wise correctness check failed\n", rank);
         }
     }
     if ( write_flag ) {
