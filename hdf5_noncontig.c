@@ -330,11 +330,14 @@ int fill_data_buffer(char*** buf, int n_datasets, int rank, hsize_t total_data_s
     return 0;
 }
 
-int compare_data_buffer(char **buf1, char **buf2, hsize_t total_data_size) {
+int compare_data_buffer(char **buf1, char **buf2, int n_datasets, hsize_t total_data_size) {
+    int i;
     hsize_t j;
-    for ( j = 0; j < total_data_size; ++j ) {
-        if (buf1[0][j] != buf2[0][j]) {
-            return 0;
+    for ( i = 0; i < n_datasets; ++i ) {
+        for ( j = 0; j < total_data_size; ++j ) {
+            if (buf1[i][j] != buf2[i][j]) {
+                return 0;
+            }
         }
     }
     return 1;
@@ -593,7 +596,6 @@ int process_read(int rank, int nprocs, int n_datasets, int ndim, int req_count, 
     pull_multidatasets();
     timings->dataset_io = MPI_Wtime() - start;
 
-    free_data_buffer(buf, n_datasets);
     recycle_all();
 
     start = MPI_Wtime();
@@ -760,7 +762,7 @@ int main (int argc, char **argv) {
         process_read(rank, nprocs, n_datasets, ndim, req_count, req_size, req_offset, filename, &buf2);
     }
     if (compare_correctness && read_flag && write_flag) {
-        if (compare_data_buffer(buf1, buf2, total_data_size)) {
+        if (compare_data_buffer(buf1, buf2, n_datasets, total_data_size)) {
             printf("Byte-wise correctness check passed\n");
         } else {
             printf("Byte-wise correctness check failed\n");
