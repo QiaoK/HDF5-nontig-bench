@@ -475,14 +475,14 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
     if (ndim == 1) {
         dims[0] = req_count * nprocs * req_size;
         if ( rank == 0 ) {
-            printf("ndim = %d, dims[0] = %llu\n", ndim, dims[0]);
+            printf("ndim = %d, dims[0] = %llu\n", ndim, (long long unsigned) dims[0]);
         }
     } else if (ndim == 2) {
         req_count_per_dim = ((int) ceil(sqrt(nprocs * req_count))) * req_size;
         dims[0] = req_count_per_dim;
         dims[1] = req_count_per_dim;
         if ( rank == 0 ) {
-            printf("ndim = %d, dims[0] = %llu, dims[1] = %llu\n", ndim, dims[0], dims[1]);
+            printf("ndim = %d, dims[0] = %llu, dims[1] = %llu\n", ndim, (long long unsigned) dims[0], (long long unsigned) dims[1]);
         }
     } else if (ndim ==3) {
         req_count_per_dim = ((int) ceil(cbrt(req_count * nprocs))) * req_size;
@@ -490,7 +490,7 @@ int set_dataset_dimensions(int rank, int nprocs, int ndim, hsize_t *dims, int re
         dims[1] = req_count_per_dim;
         dims[2] = req_count_per_dim;
         if ( rank == 0 ) {
-            printf("ndim = %d, dims[0] = %llu, dims[1] = %llu, dims[2] = %llu\n", ndim, dims[0], dims[1], dims[2]);
+            printf("ndim = %d, dims[0] = %llu, dims[1] = %llu, dims[2] = %llu\n", ndim, (long long unsigned) dims[0], (long long unsigned) dims[1], (long long unsigned) dims[2]);
         }
     }
     return 0;
