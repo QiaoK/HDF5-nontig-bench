@@ -681,7 +681,7 @@ int main (int argc, char **argv) {
     int req_type = 0;
     int read_flag = 0, write_flag = 0;
     char filename[256];
-    char **buf1, char **buf2;
+    char **buf1, **buf2;
     hsize_t **req_offset;
     hsize_t total_data_size;
     int compare_correctness = 0;
