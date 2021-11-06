@@ -8,7 +8,7 @@
 #include "random.h"
 
 #define ENABLE_MULTIDATASET 0
-#define MULTIDATASET_DEFINE 1
+#define MULTIDATASET_DEFINE 0
 
 #if MULTIDATASET_DEFINE == 1
 typedef struct H5D_rw_multi_t
@@ -736,7 +736,7 @@ int main (int argc, char **argv) {
             write_flag = 1;
             break;
         }
-        case 'W': {
+        case 'C': {
             compare_correctness = 1;
             break;
         }
