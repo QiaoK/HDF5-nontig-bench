@@ -331,7 +331,7 @@ int fill_data_buffer(char*** buf, int n_datasets, int rank, hsize_t total_data_s
 }
 
 int compare_data_buffer(char **buf1, char **buf2, hsize_t total_data_size) {
-    hszie_t j;
+    hsize_t j;
     for ( j = 0; j < total_data_size; ++j ) {
         if (buf1[0][j] != buf2[0][j]) {
             return 0;
