@@ -766,9 +766,12 @@ int main (int argc, char **argv) {
             printf("Byte-wise correctness check failed\n");
         }
     }
-
-    free_data_buffer(buf1, n_datasets);
-    free_data_buffer(buf2, n_datasets);
+    if ( write_flag ) {
+        free_data_buffer(buf1, n_datasets);
+    }
+    if ( read_flag ) {
+        free_data_buffer(buf2, n_datasets);
+    }
     finalize_requests(req_offset);
     MPI_Finalize ();
     return 0;
