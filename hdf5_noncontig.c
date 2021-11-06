@@ -744,8 +744,8 @@ int main (int argc, char **argv) {
         }
         default: {
             if (rank == 0) printf("arguments are insufficient\n");
-            MPI_Finalize ();
-            return 1;
+            //MPI_Finalize ();
+            //return 1;
         }
     }
     if (rank == 0) {
